@@ -158,11 +158,7 @@ export const TermsAndConditions = () => {
               </p>
             </section>
 
-            <div className="mt-10 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
-              <strong>Nota importante:</strong> Este documento es un borrador técnico basado en el funcionamiento real
-              del código. Antes de publicarlo oficialmente, debe ser revisado y validado por un abogado especializado
-              en protección de datos en Colombia para garantizar el cumplimiento de la Ley 1581 de 2012 y normas relacionadas.
-            </div>
+
 
           </div>
         </div>
