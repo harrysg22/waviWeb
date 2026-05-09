@@ -135,7 +135,7 @@ export const Footer = () => {
               <h4 className="font-semibold text-white mb-4 text-sm">Legal</h4>
               <ul className="space-y-3">
                 <li><Link to="/terminos-y-condiciones" className="text-gray-500 hover:text-[#25B3CC] text-sm transition-colors">Términos y Condiciones</Link></li>
-                <li><a href="#" className="text-gray-500 hover:text-[#25B3CC] text-sm transition-colors">Privacidad</a></li>
+                <li><Link to="/politica-de-privacidad" className="text-gray-500 hover:text-[#25B3CC] text-sm transition-colors">Privacidad</Link></li>
                 <li><a href="#" className="text-gray-500 hover:text-[#25B3CC] text-sm transition-colors">Cookies</a></li>
                 <li><Link to="/#contact" className="text-gray-500 hover:text-[#25B3CC] text-sm transition-colors">Contacto</Link></li>
               </ul>
