@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router";
 import { Home } from "./pages/Home";
 import { TermsAndConditions } from "./pages/TermsAndConditions";
 import { PrivacyPolicy } from "./pages/PrivacyPolicy";
+import DownloadPage from "./pages/DownloadPage";
 
 export const router = createBrowserRouter([
   {
@@ -15,5 +16,9 @@ export const router = createBrowserRouter([
   {
     path: "/politica-de-privacidad",
     Component: PrivacyPolicy,
-  }
+  },
+  {
+    path: "/descargar",
+    Component: DownloadPage,
+  },
 ]);

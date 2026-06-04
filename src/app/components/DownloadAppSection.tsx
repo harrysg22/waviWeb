@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Search, Download, UserPlus, MapPin } from 'lucide-react';
 import { PhoneMockup } from './PhoneMockup';
+import { QRCodeSVG } from 'qrcode.react';
 
 export const DownloadAppSection = () => {
   const steps = [
@@ -44,7 +45,7 @@ export const DownloadAppSection = () => {
 
               <div className="space-y-8 relative before:absolute before:inset-y-0 before:left-6 before:w-[2px] before:bg-gray-200">
                 {steps.map((step, i) => (
-                  <motion.div 
+                  <motion.div
                     key={i}
                     initial={{ opacity: 0, x: 20 }}
                     whileInView={{ opacity: 1, x: 0 }}
@@ -62,6 +63,28 @@ export const DownloadAppSection = () => {
                   </motion.div>
                 ))}
               </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.6 }}
+                className="mt-10 flex items-center gap-6 p-5 bg-white rounded-2xl shadow-md border border-gray-100 w-fit"
+              >
+                <QRCodeSVG
+                  value={`${window.location.origin}/descargar`}
+                  size={96}
+                  bgColor="#ffffff"
+                  fgColor="#000000"
+                  level="M"
+                />
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">Escanea y descarga</p>
+                  <p className="text-gray-400 text-xs mt-1 max-w-[160px] leading-relaxed">
+                    Te llevamos directo a la tienda según tu dispositivo
+                  </p>
+                </div>
+              </motion.div>
             </motion.div>
           </div>
 
