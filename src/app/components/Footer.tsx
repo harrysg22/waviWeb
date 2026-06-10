@@ -138,6 +138,14 @@ export const Footer = () => {
                 <li><Link to="/politica-de-privacidad" className="text-gray-500 hover:text-[#25B3CC] text-sm transition-colors">Privacidad</Link></li>
                 <li><a href="#" className="text-gray-500 hover:text-[#25B3CC] text-sm transition-colors">Cookies</a></li>
                 <li><Link to="/#contact" className="text-gray-500 hover:text-[#25B3CC] text-sm transition-colors">Contacto</Link></li>
+                <li>
+                  <Link
+                    to="/register"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#25B3CC] hover:text-[#7FDAEB] transition-colors"
+                  >
+                    Registra tu negocio →
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
