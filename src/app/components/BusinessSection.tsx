@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router';
 import {
   TrendingUp, Users, BarChart3, Calendar, Shield, Smartphone,
   Star, Bell, ChevronRight, Apple, Play, CheckCircle2,
   ArrowRight, Zap, Globe, Award, Download
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { WaviBusinessModal } from './WaviBusinessModal';
 
 /* ─── Dual Ecosystem Comparison ─────────────────────────────────────── */
 const EcosystemCard = ({
@@ -227,11 +227,11 @@ const AnalyticsCard = () => (
 
 /* ─── Main Component ─────────────────────────────────────────────────── */
 export const BusinessSection = () => {
-  const [modalOpen, setModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const goToRegister = () => navigate('/register');
 
   return (
     <>
-      <WaviBusinessModal open={modalOpen} onClose={() => setModalOpen(false)} />
       {/* ═══ SECTION 1 — DUAL ECOSYSTEM ════════════════════════════════ */}
       <section className="py-24 bg-[#F7F9FA] relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#25B3CC]/40 to-transparent" />
@@ -273,7 +273,7 @@ export const BusinessSection = () => {
               ]}
               accent="#25B3CC"
             />
-            <div onClick={() => setModalOpen(true)} className="cursor-pointer">
+            <div onClick={goToRegister} className="cursor-pointer">
               <EcosystemCard
                 type="business"
                 label="Para Negocios"
@@ -356,7 +356,7 @@ export const BusinessSection = () => {
               {/* App Store Badges */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  onClick={() => setModalOpen(true)}
+                  onClick={goToRegister}
                   className="flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-900 px-6 py-3.5 rounded-2xl transition-all shadow-xl hover:-translate-y-0.5"
                 >
                   <Apple size={22} />
@@ -366,7 +366,7 @@ export const BusinessSection = () => {
                   </div>
                 </button>
                 <button
-                  onClick={() => setModalOpen(true)}
+                  onClick={goToRegister}
                   className="flex items-center justify-center gap-3 bg-[#111827] border border-white/10 hover:border-[#25B3CC]/50 text-white px-6 py-3.5 rounded-2xl transition-all shadow-xl hover:-translate-y-0.5"
                 >
                   <Play size={22} className="text-[#25B3CC]" />
@@ -561,13 +561,13 @@ export const BusinessSection = () => {
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
-                    onClick={() => setModalOpen(true)}
+                    onClick={goToRegister}
                     className="flex items-center gap-2 bg-[#25B3CC] hover:bg-[#1E9DB5] text-white px-6 py-3 rounded-full font-semibold text-sm transition-all shadow-[0_0_20px_rgba(37,179,204,0.3)] hover:shadow-[0_0_30px_rgba(37,179,204,0.5)]"
                   >
                     <Apple size={18} /> Registrar mi Negocio
                   </button>
                   <button
-                    onClick={() => setModalOpen(true)}
+                    onClick={goToRegister}
                     className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-3 rounded-full font-semibold text-sm transition-all"
                   >
                     <Play size={18} /> Saber Más
