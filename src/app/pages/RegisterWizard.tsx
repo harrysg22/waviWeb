@@ -476,11 +476,14 @@ function Step3({ data, set }: { data: WizardData; set: (k: keyof WizardData, v: 
 function Step4({ data, set }: {
   data: WizardData; set: (k: keyof WizardData, v: any) => void
 }) {
-  const selected = data.whatsapp ? 'whatsapp' : data.website ? 'website' : null
+  const [selected, setSelected] = useState<'whatsapp' | 'website' | null>(
+    data.whatsapp ? 'whatsapp' : data.website ? 'website' : null
+  )
 
   const selectMethod = (method: 'whatsapp' | 'website') => {
-    if (method === 'whatsapp') { set('website', ''); }
-    if (method === 'website')  { set('whatsapp', ''); }
+    setSelected(method)
+    if (method === 'whatsapp') set('website', '')
+    if (method === 'website')  set('whatsapp', '')
   }
 
   return (
