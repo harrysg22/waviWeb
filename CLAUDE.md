@@ -5,11 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev        # Start dev server
-npm run build      # Production build (outputs to dist/)
+pnpm run dev        # Start dev server
+pnpm run build      # Production build (outputs to dist/)
 ```
 
-No test suite is configured.
+No test suite is configured. TypeScript is present but there is no `tsc` script — type errors surface only at build time via Vite.
 
 ## Environment variables
 
@@ -54,9 +54,14 @@ This is a React + Vite + TypeScript marketing/landing page for the Wavi mobile a
 2. `RegisterWizard` collects business info across 7 sections and uploads images to the `business-registrations` Supabase Storage bucket
 3. On submit, data is inserted into the `business_registration` staging table (status = `pending`)
 4. An admin reviews at `/admin`, then approves or rejects
-5. Approval calls the `approve_business_registration` stored procedure (SECURITY DEFINER), which atomically creates `company`, `site`, `business_hours`, categories, amenities, contacts rows and promotes the user's `account.tipo` from `'cliente'` to `'establecimiento'`
+5. **Approve**: `RegistrationDetail` calls the `approve-registration` Edge Function (`supabase/functions/approve-registration/index.ts`) with the user's JWT. The function verifies admin status, then uses the service role to call the `approve_business_registration` SQL stored procedure, which atomically creates `company`, `site`, `business_hours`, categories, amenities, contacts rows and promotes `account.tipo` from `'cliente'` to `'establecimiento'`
+6. **Reject**: Done directly via `supabase.update()` in `RegistrationDetail` — sets `status = 'rejected'` and saves `admin_notes` (notes are required for rejection)
 
-The migration in `supabase/migrations/20240601000000_business_registration.sql` defines the table schema, RLS policies, and the approval function.
+**Migrations** (`supabase/migrations/`):
+- `20240601000000_business_registration.sql` — `business_registration` table, RLS policies, `approve_business_registration` stored procedure
+- `20240602000000_add_services_to_registration.sql` — adds `services JSONB` column (array of `{ id, name, price, duration, charge_type, capacity, description, image_urls[] }`)
+
+**Catalog tables** referenced in RegisterWizard and RegistrationDetail: `category`, `cuisine_type`, `zone`, `additional_services` (used as amenities — note the non-obvious table name).
 
 ## Styling
 
@@ -69,7 +74,7 @@ Tailwind CSS v4 via `@tailwindcss/vite`. The theme is defined in `src/styles/the
 
 **Custom utilities** defined in `theme.css`: `.text-gradient`, `.bg-gradient-premium`, `.glass-card`, `.custom-scrollbar`.
 
-CSS import chain: `src/styles/index.css` → `fonts.css` + `tailwind.css` + `theme.css`.
+CSS import chain: `src/styles/index.css` → `fonts.css` + `tailwind.css` + `theme.css` + `globals.css`.
 
 The project also includes MUI (`@mui/material`) alongside the shadcn/ui primitives. Prefer the existing shadcn/ui components in `src/app/components/ui/` for new UI work.
 
