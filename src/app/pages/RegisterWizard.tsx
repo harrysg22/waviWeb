@@ -6,6 +6,7 @@ import {
   MapPin, Phone, Globe, Instagram, MessageCircle, Clock,
   CheckCircle2, Sparkles, ArrowLeft, ChevronRight, Upload, ImageIcon,
   X, Wrench, CalendarDays, Tag, Info,
+  Heart, Coffee, Users, Pencil, Trash2, Plus,
 } from 'lucide-react'
 
 declare const google: any
@@ -16,6 +17,17 @@ interface Zone        { id: number; name: string }
 interface CuisineType { id: number; name: string }
 interface Amenity     { id: number; name: string; description: string }
 interface HourEntry   { weekday: number; open: boolean; start_time: string; end_time: string }
+
+interface ServiceEntry {
+  id:          string
+  name:        string
+  price:       string
+  duration:    string
+  charge_type: 'gratis' | 'con_consumo' | 'por_persona' | 'por_servicio'
+  capacity:    string
+  description: string
+  image_urls:  string[]
+}
 
 interface WizardData {
   business_name:    string
@@ -35,6 +47,7 @@ interface WizardData {
   instagram:        string
   image_urls:       string[]
   logo_url:         string
+  services:         ServiceEntry[]
 }
 
 const INITIAL_HOURS: HourEntry[] = [
@@ -52,7 +65,7 @@ const INITIAL_DATA: WizardData = {
   description: '', mean_price: '', address: '', zone_id: null,
   location_lat: null, location_lng: null, business_hours: INITIAL_HOURS,
   amenity_ids: [], phone: '', whatsapp: '', website: '', instagram: '',
-  image_urls: [], logo_url: '',
+  image_urls: [], logo_url: '', services: [],
 }
 
 function generateTimeOptions(): string[] {
@@ -775,30 +788,116 @@ function Step7({ data, set, amenities, amenitiesLoaded }: {
 }
 
 /* ─── Review Screen ──────────────────────────────────────────────────────────── */
-const OPTIONAL_CARDS = [
-  { label: 'Servicios',   Icon: Wrench,       from: '#125F6D', to: '#25B3CC' },
+const OTHER_OPTIONAL_CARDS = [
   { label: 'Eventos',     Icon: CalendarDays, from: '#3B2A6E', to: '#7C5CBF' },
   { label: 'Promociones', Icon: Tag,          from: '#6B4500', to: '#D4920A' },
 ]
 
+const CHARGE_TYPES = [
+  { value: 'gratis'      as const, label: 'Gratis',       sub: 'Sin costo',         Icon: Heart  },
+  { value: 'con_consumo' as const, label: 'Con consumo',  sub: 'Mínimo de consumo', Icon: Coffee },
+  { value: 'por_persona' as const, label: 'Por persona',  sub: 'Cobro individual',  Icon: Users  },
+  { value: 'por_servicio'as const, label: 'Por servicio', sub: 'Tarifa única',       Icon: Tag    },
+]
+
+const CHARGE_LABEL: Record<ServiceEntry['charge_type'], string> = {
+  gratis: 'Gratis', con_consumo: 'Con consumo',
+  por_persona: 'Por persona', por_servicio: 'Por servicio',
+}
+
+const DURATION_OPTIONS = ['30 minutos', '1 hora', '1.5 horas', '2 horas', '3 horas', 'Más de 3 horas']
+
+const BLANK_SERVICE = (): ServiceEntry => ({
+  id: Date.now().toString(), name: '', price: '', duration: '1 hora',
+  charge_type: 'por_persona', capacity: '', description: '', image_urls: [],
+})
+
 function ReviewScreen({
   getSummary, onEdit, onBack, onSubmit,
   submitting, error, bannerDismissed, onDismissBanner, session,
+  services, onServicesChange,
 }: {
-  getSummary:      (idx: number) => string
-  onEdit:          (idx: number) => void
-  onBack:          () => void
-  onSubmit:        () => void
-  submitting:      boolean
-  error:           string | null
-  bannerDismissed: boolean
-  onDismissBanner: () => void
-  session:         any
+  getSummary:       (idx: number) => string
+  onEdit:           (idx: number) => void
+  onBack:           () => void
+  onSubmit:         () => void
+  submitting:       boolean
+  error:            string | null
+  bannerDismissed:  boolean
+  onDismissBanner:  () => void
+  session:          any
+  services:         ServiceEntry[]
+  onServicesChange: (s: ServiceEntry[]) => void
 }) {
+  const [servicesOpen,  setServicesOpen]  = useState(false)
+  const [draft,         setDraft]         = useState<ServiceEntry | null>(null)
+  const [editingId,     setEditingId]     = useState<string | null>(null)
+  const [uploadingSlot, setUploadingSlot] = useState<number | null>(null)
+  const [serviceError,  setServiceError]  = useState<string | null>(null)
+
+  const setDraftField = (k: keyof ServiceEntry, v: any) => {
+    setDraft(prev => prev ? { ...prev, [k]: v } : prev)
+    setServiceError(null)
+  }
+
+  const openAdd = () => {
+    setEditingId(null); setDraft(BLANK_SERVICE()); setServiceError(null)
+  }
+
+  const openEdit = (svc: ServiceEntry) => {
+    setEditingId(svc.id); setDraft({ ...svc }); setServiceError(null)
+  }
+
+  const cancelForm = () => { setDraft(null); setEditingId(null); setServiceError(null) }
+
+  const saveService = () => {
+    if (!draft) return
+    if (!draft.name.trim()) { setServiceError('El nombre del servicio es obligatorio.'); return }
+    if (editingId) {
+      onServicesChange(services.map(s => s.id === editingId ? draft : s))
+    } else {
+      onServicesChange([...services, draft])
+    }
+    setDraft(null); setEditingId(null); setServiceError(null)
+  }
+
+  const deleteService = (id: string) => onServicesChange(services.filter(s => s.id !== id))
+
+  const handleUploadImage = async (file: File, slot: number) => {
+    if (!draft) return
+    setUploadingSlot(slot); setServiceError(null)
+    try {
+      const ext  = file.name.split('.').pop() ?? 'jpg'
+      const path = `${session.user.id}/svc-${Date.now()}-${slot}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('business-registrations').upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      const { data: ud } = supabase.storage.from('business-registrations').getPublicUrl(path)
+      setDraft(prev => {
+        if (!prev) return prev
+        const urls = [...prev.image_urls]
+        urls[slot] = ud.publicUrl
+        return { ...prev, image_urls: urls }
+      })
+    } catch (err: any) {
+      setServiceError(err?.message ?? 'Error al subir la imagen.')
+    }
+    setUploadingSlot(null)
+  }
+
+  const removeImage = (slot: number) => {
+    if (!draft) return
+    setDraft(prev => {
+      if (!prev) return prev
+      const urls = prev.image_urls.filter((_, i) => i !== slot)
+      return { ...prev, image_urls: urls }
+    })
+  }
+
   return (
     <div className="min-h-screen bg-[#F5F7F9] flex flex-col">
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="bg-[#25B3CC] sticky top-0 z-20">
         <div className="max-w-2xl mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -811,18 +910,16 @@ function ReviewScreen({
             </div>
           </div>
           <div className="w-8 h-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center">
-            <span className="text-white text-xs font-bold uppercase">
-              {session?.user?.email?.[0] ?? '?'}
-            </span>
+            <span className="text-white text-xs font-bold uppercase">{session?.user?.email?.[0] ?? '?'}</span>
           </div>
         </div>
         <div className="h-1 bg-white" />
       </div>
 
-      {/* Content */}
+      {/* ── Content ── */}
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 space-y-5 pb-16">
 
-        {/* ── Summary sections ── */}
+        {/* Summary sections */}
         <div className="space-y-2">
           <h2 className="text-gray-900 font-bold text-base px-1">Tu negocio</h2>
           {SECTIONS.map((section, idx) => (
@@ -842,7 +939,7 @@ function ReviewScreen({
           ))}
         </div>
 
-        {/* ── Tip banner ── */}
+        {/* Tip banner */}
         {!bannerDismissed && (
           <div className="bg-[#EBF8FB] border border-[#25B3CC]/30 rounded-2xl p-4 flex items-start gap-3">
             <div className="w-9 h-9 rounded-full bg-[#25B3CC] flex items-center justify-center flex-shrink-0">
@@ -854,14 +951,13 @@ function ReviewScreen({
                 ¡Perfiles completos atraen más clientes! Asegúrate de que los usuarios vean lo mejor de tu negocio.
               </p>
             </div>
-            <button onClick={onDismissBanner}
-              className="text-[#25B3CC]/60 hover:text-[#25B3CC] transition-colors flex-shrink-0 mt-0.5">
+            <button onClick={onDismissBanner} className="text-[#25B3CC]/60 hover:text-[#25B3CC] transition-colors flex-shrink-0 mt-0.5">
               <X className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* ── Optional sections ── */}
+        {/* Optional sections */}
         <div className="space-y-3">
           <div>
             <h2 className="text-gray-900 font-bold text-base">Potencia tu perfil</h2>
@@ -870,11 +966,245 @@ function ReviewScreen({
               significativamente la probabilidad de que los usuarios completen una reserva en tu negocio.
             </p>
           </div>
-          {OPTIONAL_CARDS.map(({ label, Icon, from, to }) => (
+
+          {/* ── Servicios — card or expanded panel ── */}
+          {servicesOpen ? (
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              {/* Panel header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2.5">
+                  <Wrench className="w-4 h-4 text-[#25B3CC]" />
+                  <span className="font-bold text-gray-900 text-sm">Servicios</span>
+                  {services.length > 0 && (
+                    <span className="text-xs font-semibold text-[#25B3CC] bg-[#25B3CC]/10 px-2 py-0.5 rounded-full">
+                      {services.length} agregado{services.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => { setServicesOpen(false); cancelForm() }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {draft ? (
+                /* ── Service form ── */
+                <div className="px-5 py-5 space-y-5">
+                  <p className="font-semibold text-gray-900 text-sm">{editingId ? 'Editar servicio' : 'Nuevo servicio'}</p>
+
+                  {/* Name */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Nombre del servicio <span className="text-[#25B3CC]">*</span>
+                    </label>
+                    <input className={inputCls} placeholder="Ej. Karaoke privado"
+                      value={draft.name} onChange={e => setDraftField('name', e.target.value)} maxLength={80} />
+                  </div>
+
+                  {/* Charge type */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      Tipo de cobro
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {CHARGE_TYPES.map(ct => (
+                        <button key={ct.value} type="button" onClick={() => setDraftField('charge_type', ct.value)}
+                          className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border-2 transition-all text-left ${
+                            draft.charge_type === ct.value
+                              ? 'border-[#25B3CC] bg-[#25B3CC]/8'
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }`}>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            draft.charge_type === ct.value ? 'bg-[#25B3CC] text-white' : 'bg-gray-100 text-gray-400'
+                          }`}>
+                            <ct.Icon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className={`text-sm font-bold leading-tight ${draft.charge_type === ct.value ? 'text-[#25B3CC]' : 'text-gray-800'}`}>
+                              {ct.label}
+                            </p>
+                            <p className="text-gray-400 text-xs">{ct.sub}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Price (hidden for gratis) */}
+                  {draft.charge_type !== 'gratis' && (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                        {draft.charge_type === 'con_consumo' ? 'Consumo mínimo (COP)' : 'Precio (COP)'}
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                        <input className={`${inputCls} pl-7`} type="number" placeholder="Ej. 45000"
+                          value={draft.price} onChange={e => setDraftField('price', e.target.value)} min="0" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Duration */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Duración
+                    </label>
+                    <div className="relative">
+                      <select className={selectCls} value={draft.duration}
+                        onChange={e => setDraftField('duration', e.target.value)}>
+                        {DURATION_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Capacity */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Capacidad (personas)
+                    </label>
+                    <input className={inputCls} type="number" placeholder="Ej. 10"
+                      value={draft.capacity} onChange={e => setDraftField('capacity', e.target.value)} min="1" />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Descripción
+                    </label>
+                    <textarea className={`${inputCls} resize-none`} rows={3}
+                      placeholder="Describe el servicio que ofreces..."
+                      value={draft.description} onChange={e => setDraftField('description', e.target.value)} maxLength={300} />
+                    <div className="text-right text-gray-400 text-[11px] mt-1">{draft.description.length}/300</div>
+                  </div>
+
+                  {/* Images — max 3 */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      Imágenes <span className="normal-case font-normal text-gray-400">(máx. 3)</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[0, 1, 2].map(slot => {
+                        const url = draft.image_urls[slot]
+                        return url ? (
+                          <div key={slot} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <button type="button" onClick={() => removeImage(slot)}
+                                className="bg-red-500/90 text-white text-[10px] font-medium px-3 py-1.5 rounded-lg">
+                                Eliminar
+                              </button>
+                            </div>
+                            {uploadingSlot === slot && (
+                              <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                                <Loader2 className="w-5 h-5 text-[#25B3CC] animate-spin" />
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <label key={slot}
+                            className="aspect-square rounded-xl border-2 border-dashed border-gray-200 hover:border-[#25B3CC]/50 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all bg-gray-50 hover:bg-[#25B3CC]/5">
+                            {uploadingSlot === slot
+                              ? <Loader2 className="w-5 h-5 text-[#25B3CC] animate-spin" />
+                              : <><Upload className="w-4 h-4 text-gray-400" /><span className="text-[10px] text-gray-400">Agregar</span></>
+                            }
+                            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                              onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadImage(f, slot); e.target.value = '' }} />
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {serviceError && (
+                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                      <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                      <p className="text-red-600 text-sm">{serviceError}</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-1">
+                    <button onClick={saveService}
+                      className="flex-1 bg-[#25B3CC] hover:bg-[#1E9DB5] text-white font-semibold py-3 rounded-xl text-sm transition-all">
+                      {editingId ? 'Guardar cambios' : 'Guardar servicio'}
+                    </button>
+                    <button onClick={cancelForm}
+                      className="px-5 text-gray-500 hover:text-gray-700 font-medium text-sm transition-colors">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ── Services list ── */
+                <div className="px-5 py-4 space-y-3">
+                  {services.length === 0 && (
+                    <p className="text-gray-400 text-sm text-center py-4">Aún no has agregado servicios.</p>
+                  )}
+                  {services.map(svc => (
+                    <div key={svc.id} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3">
+                      {svc.image_urls[0] ? (
+                        <img src={svc.image_urls[0]} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-[#25B3CC]/10 flex items-center justify-center flex-shrink-0">
+                          <Wrench className="w-5 h-5 text-[#25B3CC]" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm">{svc.name}</p>
+                        <p className="text-gray-500 text-xs mt-0.5">
+                          {CHARGE_LABEL[svc.charge_type]}
+                          {svc.price && svc.charge_type !== 'gratis' ? ` · $${Number(svc.price).toLocaleString('es-CO')}` : ''}
+                          {svc.duration ? ` · ${svc.duration}` : ''}
+                        </p>
+                        {svc.capacity && <p className="text-gray-400 text-xs mt-0.5">Cap: {svc.capacity} personas</p>}
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button onClick={() => openEdit(svc)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-[#25B3CC] hover:bg-[#25B3CC]/8 transition-all">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => deleteService(svc.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={openAdd}
+                    className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#25B3CC]/40 hover:border-[#25B3CC] text-[#25B3CC] font-semibold py-3 rounded-xl text-sm transition-all hover:bg-[#25B3CC]/5">
+                    <Plus className="w-4 h-4" /> Agregar servicio
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ── Servicios card ── */
+            <button type="button" onClick={() => setServicesOpen(true)}
+              className="w-full relative overflow-hidden rounded-2xl h-24 flex items-end p-4 text-left">
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #125F6D, #25B3CC)' }} />
+              <div className="absolute inset-0 flex items-center justify-end pr-6 opacity-20">
+                <Wrench className="w-20 h-20 text-white" />
+              </div>
+              <span className="relative text-white font-bold text-lg drop-shadow">Servicios</span>
+              {services.length > 0 ? (
+                <div className="absolute bottom-3 right-3 bg-green-500 rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm">
+                  <Check className="w-3 h-3 text-white" />
+                  <span className="text-white text-xs font-semibold">{services.length}</span>
+                </div>
+              ) : (
+                <div className="absolute bottom-3 right-3 bg-white rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm">
+                  <Info className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="text-gray-700 text-xs font-semibold">0/1</span>
+                </div>
+              )}
+            </button>
+          )}
+
+          {/* Eventos & Promociones cards */}
+          {OTHER_OPTIONAL_CARDS.map(({ label, Icon, from, to }) => (
             <button key={label} type="button"
               className="w-full relative overflow-hidden rounded-2xl h-24 flex items-end p-4 text-left">
-              <div className="absolute inset-0"
-                style={{ background: `linear-gradient(135deg, ${from}, ${to})` }} />
+              <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${from}, ${to})` }} />
               <div className="absolute inset-0 flex items-center justify-end pr-6 opacity-20">
                 <Icon className="w-20 h-20 text-white" />
               </div>
@@ -887,7 +1217,7 @@ function ReviewScreen({
           ))}
         </div>
 
-        {/* ── Submit ── */}
+        {/* Submit */}
         <div className="space-y-3 pt-2">
           {error && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
@@ -1083,6 +1413,7 @@ export default function RegisterWizard() {
       main_image_url: data.image_urls[0] || null,
       image_urls: data.image_urls,
       logo_url: data.logo_url || null,
+      services: data.services,
     })
     setSubmitting(false)
     if (error) { setSectionError('Error al enviar. Por favor intenta de nuevo.'); console.error(error); return }
@@ -1146,6 +1477,8 @@ export default function RegisterWizard() {
       bannerDismissed={bannerDismissed}
       onDismissBanner={() => setBannerDismissed(true)}
       session={session}
+      services={data.services}
+      onServicesChange={(s) => set('services', s)}
     />
   )
 
