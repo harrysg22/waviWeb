@@ -1023,6 +1023,31 @@ export default function RegisterWizard() {
             </AccordionSection>
           )
         })}
+
+        {/* ── Submit bar — visible when all 7 complete ── */}
+        {allComplete && (
+          <div className="bg-white border border-[#25B3CC]/30 rounded-2xl p-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-4 h-4 text-[#25B3CC] shrink-0 mt-0.5" />
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Todo listo. Al enviar, tu solicitud queda en revisión y te confirmaremos en máximo{' '}
+                <span className="text-gray-900 font-semibold">48 horas hábiles</span>.
+              </p>
+            </div>
+            {sectionError && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                <p className="text-red-600 text-sm">{sectionError}</p>
+              </div>
+            )}
+            <button onClick={handleSubmit} disabled={submitting}
+              className="w-full flex items-center justify-center gap-2 bg-[#25B3CC] hover:bg-[#1E9DB5] text-white font-bold py-3.5 rounded-xl transition-all text-sm disabled:opacity-70">
+              {submitting
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                : <><Sparkles className="w-4 h-4" /> Enviar solicitud</>}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
