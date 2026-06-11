@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronUp, Check, AlertCircle, Loader2,
   MapPin, Phone, Globe, Instagram, MessageCircle, Clock,
   CheckCircle2, Sparkles, ArrowLeft, ChevronRight, Upload, ImageIcon,
+  X, Wrench, CalendarDays, Tag, Info,
 } from 'lucide-react'
 
 declare const google: any
@@ -32,7 +33,7 @@ interface WizardData {
   whatsapp:         string
   website:          string
   instagram:        string
-  main_image_url:   string
+  image_urls:       string[]
   logo_url:         string
 }
 
@@ -51,7 +52,7 @@ const INITIAL_DATA: WizardData = {
   description: '', mean_price: '', address: '', zone_id: null,
   location_lat: null, location_lng: null, business_hours: INITIAL_HOURS,
   amenity_ids: [], phone: '', whatsapp: '', website: '', instagram: '',
-  main_image_url: '', logo_url: '',
+  image_urls: [], logo_url: '',
 }
 
 function generateTimeOptions(): string[] {
@@ -78,8 +79,8 @@ const SECTIONS = [
   { label: 'NEGOCIO',   title: 'Tu negocio' },
   { label: 'UBICACIÓN', title: 'Ubicación' },
   { label: 'HORARIOS',  title: 'Horarios' },
-  { label: 'CONTACTO',  title: 'Contacto' },
-  { label: 'IMAGEN',    title: 'Imagen principal' },
+  { label: 'CONTACTO',  title: 'Contacto para reservas' },
+  { label: 'IMÁGENES',  title: 'Imágenes' },
   { label: 'LOGO',      title: 'Logo' },
   { label: 'SERVICIOS', title: 'Servicios extra' },
 ]
@@ -471,111 +472,194 @@ function Step3({ data, set }: { data: WizardData; set: (k: keyof WizardData, v: 
   )
 }
 
-/* ─── Step 4 — Contacto ──────────────────────────────────────────────────────── */
-function Step4({ data, set, categories, zones }: {
+/* ─── Step 4 — Contacto para reservas ───────────────────────────────────────── */
+function Step4({ data, set }: {
   data: WizardData; set: (k: keyof WizardData, v: any) => void
-  categories: Category[]; zones: Zone[]
 }) {
-  const openDays     = data.business_hours.filter(h => h.open)
-  const selectedCats = categories.filter(c => data.category_ids.includes(c.id))
-  const selectedZone = zones.find(z => z.id === data.zone_id)
+  const selected = data.whatsapp ? 'whatsapp' : data.website ? 'website' : null
+
+  const selectMethod = (method: 'whatsapp' | 'website') => {
+    if (method === 'whatsapp') { set('website', ''); }
+    if (method === 'website')  { set('whatsapp', ''); }
+  }
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {[
-          { icon: Phone,         key: 'phone',     label: 'Teléfono',  placeholder: '+57 310 000 0000' },
-          { icon: MessageCircle, key: 'whatsapp',  label: 'WhatsApp',  placeholder: '+57 310 000 0000' },
-          { icon: Globe,         key: 'website',   label: 'Sitio web', placeholder: 'www.tunegocio.com' },
-          { icon: Instagram,     key: 'instagram', label: 'Instagram', placeholder: '@tunegocio' },
-        ].map(({ icon: Icon, key, label, placeholder }) => (
-          <div key={key}>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{label}</label>
-            <div className="relative">
-              <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input className={`${inputCls} pl-10`} placeholder={placeholder}
-                value={(data as any)[key]} onChange={e => set(key as keyof WizardData, e.target.value)} />
-            </div>
+    <div className="space-y-4">
+      <div className="flex items-start gap-2.5 bg-[#25B3CC]/8 border border-[#25B3CC]/20 rounded-xl px-4 py-3">
+        <AlertCircle className="w-4 h-4 text-[#25B3CC] shrink-0 mt-0.5" />
+        <p className="text-gray-600 text-sm leading-relaxed">
+          Para mayor facilidad de tus clientes, elige <span className="font-semibold text-gray-800">solo un medio de contacto</span> para recibir reservas.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {/* WhatsApp */}
+        <button type="button" onClick={() => selectMethod('whatsapp')}
+          className={`flex flex-col items-center gap-2 py-4 px-3 rounded-xl border-2 transition-all ${
+            selected === 'whatsapp'
+              ? 'border-[#25B3CC] bg-[#25B3CC]/8'
+              : 'border-gray-200 hover:border-gray-300 bg-white'
+          }`}>
+          <MessageCircle className={`w-6 h-6 ${selected === 'whatsapp' ? 'text-[#25B3CC]' : 'text-gray-400'}`} />
+          <span className={`text-sm font-semibold ${selected === 'whatsapp' ? 'text-[#25B3CC]' : 'text-gray-500'}`}>WhatsApp</span>
+          {selected === 'whatsapp' && <Check className="w-4 h-4 text-[#25B3CC]" />}
+        </button>
+
+        {/* Sitio web */}
+        <button type="button" onClick={() => selectMethod('website')}
+          className={`flex flex-col items-center gap-2 py-4 px-3 rounded-xl border-2 transition-all ${
+            selected === 'website'
+              ? 'border-[#25B3CC] bg-[#25B3CC]/8'
+              : 'border-gray-200 hover:border-gray-300 bg-white'
+          }`}>
+          <Globe className={`w-6 h-6 ${selected === 'website' ? 'text-[#25B3CC]' : 'text-gray-400'}`} />
+          <span className={`text-sm font-semibold ${selected === 'website' ? 'text-[#25B3CC]' : 'text-gray-500'}`}>Sitio web</span>
+          {selected === 'website' && <Check className="w-4 h-4 text-[#25B3CC]" />}
+        </button>
+      </div>
+
+      {selected === 'whatsapp' && (
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+            Número de WhatsApp <span className="text-[#25B3CC]">*</span>
+          </label>
+          <div className="relative">
+            <MessageCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input className={`${inputCls} pl-10`} placeholder="+57 310 000 0000"
+              value={data.whatsapp} onChange={e => set('whatsapp', e.target.value)} />
           </div>
-        ))}
-      </div>
-      <p className="text-gray-400 text-xs">Mínimo un número de contacto — teléfono o WhatsApp.</p>
-      <div className="bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-[#25B3CC]" />
-          <span className="text-gray-800 text-sm font-semibold">Resumen</span>
         </div>
-        <div className="divide-y divide-gray-50">
-          {[
-            { label: 'Nombre',     value: data.business_name || '—' },
-            { label: 'Categorías', value: selectedCats.map(c => c.name).join(', ') || '—' },
-            { label: 'Dirección',  value: data.address || '—' },
-            { label: 'Zona',       value: selectedZone?.name || '—' },
-            { label: 'Días',       value: openDays.length > 0 ? `${openDays.length} día(s) de atención` : '—' },
-          ].map((row, i) => (
-            <div key={i} className="flex items-center justify-between px-5 py-3">
-              <span className="text-gray-400 text-xs">{row.label}</span>
-              <span className="text-gray-800 text-xs font-medium max-w-[200px] text-right truncate">{row.value}</span>
-            </div>
-          ))}
+      )}
+
+      {selected === 'website' && (
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+            URL del sitio web <span className="text-[#25B3CC]">*</span>
+          </label>
+          <div className="relative">
+            <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input className={`${inputCls} pl-10`} placeholder="www.tunegocio.com"
+              value={data.website} onChange={e => set('website', e.target.value)} />
+          </div>
         </div>
-      </div>
+      )}
+
+      {!selected && (
+        <p className="text-gray-400 text-xs text-center pt-1">Selecciona una opción para continuar.</p>
+      )}
     </div>
   )
 }
 
-/* ─── Step 5 — Imagen principal ──────────────────────────────────────────────── */
-function Step5({ data, set, session }: { data: WizardData; set: (k: keyof WizardData, v: any) => void; session: any }) {
-  const [uploading, setUploading] = useState(false)
-  const [error,     setError]     = useState<string | null>(null)
+/* ─── Step 5 — Imágenes ──────────────────────────────────────────────────────── */
+const MAX_IMAGES = 6
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+function Step5({ data, set, session }: { data: WizardData; set: (k: keyof WizardData, v: any) => void; session: any }) {
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
+  const [error,        setError]        = useState<string | null>(null)
+
+  const urls   = data.image_urls
+  const canAdd = urls.length < MAX_IMAGES
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>, slotIdx: number) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setUploading(true); setError(null)
+    e.target.value = ''
+    setUploadingIdx(slotIdx); setError(null)
     try {
-      const url = await uploadImage(file, session.user.id, 'main')
-      set('main_image_url', url)
+      const ext  = file.name.split('.').pop() ?? 'jpg'
+      const path = `${session.user.id}/gallery-${slotIdx}-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('business-registrations')
+        .upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      const { data: urlData } = supabase.storage.from('business-registrations').getPublicUrl(path)
+      const newUrls = [...urls]
+      newUrls[slotIdx] = urlData.publicUrl
+      set('image_urls', newUrls)
     } catch (err: any) {
-      console.error('upload error (main):', err)
-      setError(err?.message ?? 'Error al subir la imagen. Intenta de nuevo.')
+      console.error('upload error (gallery):', err)
+      setError(err?.message ?? 'Error al subir la imagen.')
     }
-    setUploading(false)
+    setUploadingIdx(null)
+  }
+
+  const removeImage = (idx: number) => {
+    set('image_urls', urls.filter((_, i) => i !== idx))
   }
 
   return (
-    <div>
-      <p className="text-gray-500 text-sm mb-4">Foto principal que verán los usuarios en la app. Recomendado: 1200×800 px.</p>
-      <label className={`block w-full rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden ${
-        data.main_image_url ? 'border-[#25B3CC]/40' : 'border-gray-200 hover:border-[#25B3CC]/40'
-      }`}>
-        {uploading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <Loader2 className="w-8 h-8 text-[#25B3CC] animate-spin" />
-            <p className="text-gray-500 text-sm">Subiendo imagen...</p>
-          </div>
-        ) : data.main_image_url ? (
-          <div className="relative">
-            <img src={data.main_image_url} alt="Imagen principal" className="w-full h-52 object-cover" />
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-              <p className="text-white text-sm font-medium flex items-center gap-2"><Upload className="w-4 h-4" /> Cambiar imagen</p>
+    <div className="space-y-4">
+      <div className="flex items-start gap-2.5 bg-[#25B3CC]/8 border border-[#25B3CC]/20 rounded-xl px-4 py-3">
+        <AlertCircle className="w-4 h-4 text-[#25B3CC] shrink-0 mt-0.5" />
+        <p className="text-gray-600 text-sm leading-relaxed">
+          Solo es obligatoria la primera imagen. Puedes subir hasta {MAX_IMAGES} fotos —{' '}
+          <span className="font-medium text-gray-800">también podrás agregar o editar imágenes más adelante.</span>
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {/* Slots con imagen */}
+        {urls.map((url, idx) => (
+          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
+            <img src={url} alt={`Imagen ${idx + 1}`} className="w-full h-full object-cover" />
+            {/* Badge principal */}
+            {idx === 0 && (
+              <span className="absolute top-1.5 left-1.5 bg-[#25B3CC] text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
+                PRINCIPAL
+              </span>
+            )}
+            {/* Reemplazar + eliminar */}
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+              <label className="cursor-pointer bg-white/20 hover:bg-white/30 text-white text-[10px] font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
+                <Upload className="w-3 h-3" /> Cambiar
+                <input type="file" accept="image/jpeg,image/png,image/webp"
+                  onChange={e => handleFile(e, idx)} className="hidden" />
+              </label>
+              <button type="button" onClick={() => removeImage(idx)}
+                className="bg-red-500/80 hover:bg-red-500 text-white text-[10px] font-medium px-3 py-1.5 rounded-lg transition-colors">
+                Eliminar
+              </button>
             </div>
+            {uploadingIdx === idx && (
+              <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                <Loader2 className="w-5 h-5 text-[#25B3CC] animate-spin" />
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
-              <ImageIcon className="w-7 h-7 text-gray-400" />
-            </div>
-            <div className="text-center">
-              <p className="text-gray-700 text-sm font-medium">Haz click para subir una imagen</p>
-              <p className="text-gray-400 text-xs mt-1">JPG, PNG o WebP · Máx. 5MB</p>
-            </div>
-          </div>
+        ))}
+
+        {/* Slot para agregar */}
+        {canAdd && (
+          <label className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all ${
+            urls.length === 0
+              ? 'border-[#25B3CC]/50 bg-[#25B3CC]/5 hover:border-[#25B3CC]'
+              : 'border-gray-200 hover:border-gray-300 bg-gray-50'
+          }`}>
+            {uploadingIdx === urls.length ? (
+              <Loader2 className="w-5 h-5 text-[#25B3CC] animate-spin" />
+            ) : (
+              <>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${urls.length === 0 ? 'bg-[#25B3CC]/15' : 'bg-gray-100'}`}>
+                  <span className={`text-xl font-light leading-none ${urls.length === 0 ? 'text-[#25B3CC]' : 'text-gray-400'}`}>+</span>
+                </div>
+                <span className={`text-[10px] font-medium ${urls.length === 0 ? 'text-[#25B3CC]' : 'text-gray-400'}`}>
+                  {urls.length === 0 ? 'Agregar imagen' : 'Agregar'}
+                </span>
+              </>
+            )}
+            <input type="file" accept="image/jpeg,image/png,image/webp"
+              onChange={e => handleFile(e, urls.length)} className="hidden" />
+          </label>
         )}
-        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} className="hidden" />
-      </label>
+      </div>
+
+      <p className="text-gray-400 text-[11px]">
+        {urls.length}/{MAX_IMAGES} imágenes · JPG, PNG o WebP · Máx. 5MB por foto
+      </p>
+
       {error && (
-        <div className="mt-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
           <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
           <p className="text-red-600 text-sm">{error}</p>
         </div>
@@ -687,6 +771,144 @@ function Step7({ data, set, amenities, amenitiesLoaded }: {
   )
 }
 
+/* ─── Review Screen ──────────────────────────────────────────────────────────── */
+const OPTIONAL_CARDS = [
+  { label: 'Servicios',   Icon: Wrench,       from: '#125F6D', to: '#25B3CC' },
+  { label: 'Eventos',     Icon: CalendarDays, from: '#3B2A6E', to: '#7C5CBF' },
+  { label: 'Promociones', Icon: Tag,          from: '#6B4500', to: '#D4920A' },
+]
+
+function ReviewScreen({
+  getSummary, onEdit, onBack, onSubmit,
+  submitting, error, bannerDismissed, onDismissBanner, session,
+}: {
+  getSummary:      (idx: number) => string
+  onEdit:          (idx: number) => void
+  onBack:          () => void
+  onSubmit:        () => void
+  submitting:      boolean
+  error:           string | null
+  bannerDismissed: boolean
+  onDismissBanner: () => void
+  session:         any
+}) {
+  return (
+    <div className="min-h-screen bg-[#F5F7F9] flex flex-col">
+
+      {/* Header */}
+      <div className="bg-[#25B3CC] sticky top-0 z-20">
+        <div className="max-w-2xl mx-auto px-5 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} className="text-white/80 hover:text-white transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <p className="text-white font-bold text-sm leading-tight">Revisa tu información</p>
+              <p className="text-white/75 text-xs">Paso final antes de enviar</p>
+            </div>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center">
+            <span className="text-white text-xs font-bold uppercase">
+              {session?.user?.email?.[0] ?? '?'}
+            </span>
+          </div>
+        </div>
+        <div className="h-1 bg-white" />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 space-y-5 pb-16">
+
+        {/* ── Summary sections ── */}
+        <div className="space-y-2">
+          <h2 className="text-gray-900 font-bold text-base px-1">Tu negocio</h2>
+          {SECTIONS.map((section, idx) => (
+            <div key={idx} className="bg-white rounded-2xl border border-gray-100 flex items-center gap-3 px-5 py-4">
+              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                <Check className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider">{idx + 1} · {section.label}</p>
+                <p className="text-gray-800 text-sm font-medium mt-0.5 truncate">{getSummary(idx)}</p>
+              </div>
+              <button onClick={() => onEdit(idx)}
+                className="text-[#25B3CC] text-xs font-semibold flex-shrink-0 hover:text-[#1E9DB5] transition-colors px-3 py-1.5 rounded-lg hover:bg-[#25B3CC]/8">
+                Editar
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Tip banner ── */}
+        {!bannerDismissed && (
+          <div className="bg-[#EBF8FB] border border-[#25B3CC]/30 rounded-2xl p-4 flex items-start gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#25B3CC] flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[#125F6D] font-bold text-sm">Agrega la información</p>
+              <p className="text-[#25B3CC] text-sm mt-0.5 leading-relaxed">
+                ¡Perfiles completos atraen más clientes! Asegúrate de que los usuarios vean lo mejor de tu negocio.
+              </p>
+            </div>
+            <button onClick={onDismissBanner}
+              className="text-[#25B3CC]/60 hover:text-[#25B3CC] transition-colors flex-shrink-0 mt-0.5">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* ── Optional sections ── */}
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-gray-900 font-bold text-base">Potencia tu perfil</h2>
+            <p className="text-gray-500 text-sm mt-1 leading-relaxed">
+              Las siguientes secciones son opcionales, pero agregar esta información aumenta
+              significativamente la probabilidad de que los usuarios completen una reserva en tu negocio.
+            </p>
+          </div>
+          {OPTIONAL_CARDS.map(({ label, Icon, from, to }) => (
+            <button key={label} type="button"
+              className="w-full relative overflow-hidden rounded-2xl h-24 flex items-end p-4 text-left">
+              <div className="absolute inset-0"
+                style={{ background: `linear-gradient(135deg, ${from}, ${to})` }} />
+              <div className="absolute inset-0 flex items-center justify-end pr-6 opacity-20">
+                <Icon className="w-20 h-20 text-white" />
+              </div>
+              <span className="relative text-white font-bold text-lg drop-shadow">{label}</span>
+              <div className="absolute bottom-3 right-3 bg-white rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm">
+                <Info className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-gray-700 text-xs font-semibold">0/1</span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* ── Submit ── */}
+        <div className="space-y-3 pt-2">
+          {error && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+          <button onClick={onSubmit} disabled={submitting}
+            className="w-full flex items-center justify-center gap-2 bg-[#25B3CC] hover:bg-[#1E9DB5] text-white font-bold py-4 rounded-2xl transition-all text-base disabled:opacity-70">
+            {submitting
+              ? <><Loader2 className="w-5 h-5 animate-spin" /> Enviando...</>
+              : <><Sparkles className="w-4 h-4" /> Enviar solicitud</>}
+          </button>
+          <p className="text-center text-gray-400 text-xs leading-relaxed">
+            Al enviar, tu solicitud queda en revisión.<br />
+            Te confirmaremos en máximo <span className="font-semibold">48 horas hábiles</span>.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    MAIN WIZARD
 ═══════════════════════════════════════════════════════════════════════════════ */
@@ -703,6 +925,9 @@ export default function RegisterWizard() {
   const [completed,      setCompleted]      = useState<Set<number>>(new Set())
   const [sectionError,   setSectionError]   = useState<string | null>(null)
   const [submitting,     setSubmitting]     = useState(false)
+  const [showReview,       setShowReview]       = useState(false)
+  const [bannerDismissed,  setBannerDismissed]  = useState(false)
+  const [comingFromReview, setComingFromReview] = useState(false)
 
   const [categories,      setCategories]      = useState<Category[]>([])
   const [zones,           setZones]           = useState<Zone[]>([])
@@ -779,10 +1004,10 @@ export default function RegisterWizard() {
     }
     if (idx === 2 && data.business_hours.filter(h => h.open).length === 0)
       return 'Selecciona al menos un día de atención.'
-    if (idx === 3 && !data.phone.trim() && !data.whatsapp.trim())
-      return 'Ingresa al menos un número de contacto.'
-    if (idx === 4 && !data.main_image_url)
-      return 'Sube una imagen principal para tu negocio.'
+    if (idx === 3 && !data.whatsapp.trim() && !data.website.trim())
+      return 'Selecciona un medio de contacto para reservas.'
+    if (idx === 4 && data.image_urls.length === 0)
+      return 'Sube al menos una imagen de tu negocio.'
     if (idx === 5 && !data.logo_url)
       return 'Sube el logo de tu negocio.'
     return null
@@ -793,8 +1018,8 @@ export default function RegisterWizard() {
     if (idx === 0) return data.business_name
     if (idx === 1) return data.address.length > 50 ? data.address.slice(0, 50) + '…' : data.address
     if (idx === 2) { const o = data.business_hours.filter(h => h.open); return `${o.length} día${o.length !== 1 ? 's' : ''} de atención` }
-    if (idx === 3) return data.phone || data.whatsapp || ''
-    if (idx === 4) return data.main_image_url ? 'Imagen subida ✓' : ''
+    if (idx === 3) return data.whatsapp ? `WhatsApp: ${data.whatsapp}` : data.website ? `Web: ${data.website}` : ''
+    if (idx === 4) { const n = data.image_urls.length; return n > 0 ? `${n} imagen${n !== 1 ? 'es' : ''} subida${n !== 1 ? 's' : ''}` : '' }
     if (idx === 5) return data.logo_url ? 'Logo subido ✓' : ''
     if (idx === 6) { const n = data.amenity_ids.length; return n > 0 ? `${n} servicio${n !== 1 ? 's' : ''} seleccionado${n !== 1 ? 's' : ''}` : 'Sin servicios' }
     return ''
@@ -822,14 +1047,15 @@ export default function RegisterWizard() {
     if (err) { setSectionError(err); return }
     setSectionError(null)
     setCompleted(prev => new Set([...prev, idx]))
-    // Open next incomplete section
     const next = idx + 1
-    if (next < SECTIONS.length) {
+    if (next < SECTIONS.length && !comingFromReview) {
       const nextLocked = PART2_INDICES.includes(next) && !PART1_INDICES.every(i => i === idx ? true : completed.has(i))
       if (!nextLocked) setActiveSection(next)
       else setActiveSection(null)
     } else {
       setActiveSection(null)
+      setComingFromReview(false)
+      setShowReview(true)
     }
   }
 
@@ -851,7 +1077,8 @@ export default function RegisterWizard() {
       address: data.address, zone_id: data.zone_id,
       location_lat: data.location_lat, location_lng: data.location_lng,
       business_hours: businessHours, amenity_ids: data.amenity_ids, contacts,
-      main_image_url: data.main_image_url || null,
+      main_image_url: data.image_urls[0] || null,
+      image_urls: data.image_urls,
       logo_url: data.logo_url || null,
     })
     setSubmitting(false)
@@ -899,14 +1126,33 @@ export default function RegisterWizard() {
     </div>
   )
 
-  const progressPct   = Math.round((completed.size / SECTIONS.length) * 100)
-  const allComplete   = completed.size === SECTIONS.length
+  if (showReview) return (
+    <ReviewScreen
+      getSummary={getSummary}
+      onEdit={(idx) => {
+        setShowReview(false)
+        setComingFromReview(true)
+        setCompleted(prev => { const s = new Set(prev); s.delete(idx); return s })
+        setActiveSection(idx)
+        setSectionError(null)
+      }}
+      onBack={() => setShowReview(false)}
+      onSubmit={handleSubmit}
+      submitting={submitting}
+      error={sectionError}
+      bannerDismissed={bannerDismissed}
+      onDismissBanner={() => setBannerDismissed(true)}
+      session={session}
+    />
+  )
+
+  const progressPct = Math.round((completed.size / SECTIONS.length) * 100)
 
   const sectionContent: Record<number, React.ReactNode> = {
     0: <Step1 data={data} set={set} categories={categories} cuisineTypes={cuisineTypes} />,
     1: <Step2 data={data} set={set} zones={zones} />,
     2: <Step3 data={data} set={set} />,
-    3: <Step4 data={data} set={set} categories={categories} zones={zones} />,
+    3: <Step4 data={data} set={set} />,
     4: <Step5 data={data} set={set} session={session} />,
     5: <Step6 data={data} set={set} session={session} />,
     6: <Step7 data={data} set={set} amenities={amenities} amenitiesLoaded={amenitiesLoaded} />,
@@ -1042,62 +1288,14 @@ export default function RegisterWizard() {
               onHeaderClick={() => handleHeaderClick(i)}
               error={activeSection === i ? sectionError : null}>
               {sectionContent[i]}
-              {!isLast ? (
-                <ContinuarBtn onClick={() => handleContinuar(i)} />
-              ) : (
-                <div className="mt-5 space-y-3">
-                  <div className="bg-[#25B3CC]/8 border border-[#25B3CC]/20 rounded-xl px-4 py-3 flex items-start gap-3">
-                    <Sparkles className="w-4 h-4 text-[#25B3CC] shrink-0 mt-0.5" />
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      Al enviar, tu solicitud queda en revisión. Te confirmaremos en máximo{' '}
-                      <span className="text-gray-900 font-semibold">48 horas hábiles</span>.
-                    </p>
-                  </div>
-                  {sectionError && (
-                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                      <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                      <p className="text-red-600 text-sm">{sectionError}</p>
-                    </div>
-                  )}
-                  <button onClick={allComplete ? handleSubmit : () => handleContinuar(i)}
-                    disabled={submitting}
-                    className="w-full flex items-center justify-center gap-2 bg-[#25B3CC] hover:bg-[#1E9DB5] text-white font-bold py-3.5 rounded-xl transition-all text-sm disabled:opacity-70">
-                    {submitting
-                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
-                      : allComplete
-                      ? <><Sparkles className="w-4 h-4" /> Enviar solicitud</>
-                      : <>Guardar y continuar <ChevronRight className="w-4 h-4" /></>}
-                  </button>
-                </div>
-              )}
+              <ContinuarBtn
+                onClick={() => handleContinuar(i)}
+                label={isLast ? 'Revisar y enviar' : 'Continuar'}
+              />
             </AccordionSection>
           )
         })}
 
-        {/* ── Submit bar — visible when all 7 complete ── */}
-        {allComplete && (
-          <div className="bg-white border border-[#25B3CC]/30 rounded-2xl p-5 space-y-3">
-            <div className="flex items-start gap-3">
-              <Sparkles className="w-4 h-4 text-[#25B3CC] shrink-0 mt-0.5" />
-              <p className="text-gray-600 text-sm leading-relaxed">
-                Todo listo. Al enviar, tu solicitud queda en revisión y te confirmaremos en máximo{' '}
-                <span className="text-gray-900 font-semibold">48 horas hábiles</span>.
-              </p>
-            </div>
-            {sectionError && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                <p className="text-red-600 text-sm">{sectionError}</p>
-              </div>
-            )}
-            <button onClick={handleSubmit} disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-[#25B3CC] hover:bg-[#1E9DB5] text-white font-bold py-3.5 rounded-xl transition-all text-sm disabled:opacity-70">
-              {submitting
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
-                : <><Sparkles className="w-4 h-4" /> Enviar solicitud</>}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )
