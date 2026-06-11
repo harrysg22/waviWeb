@@ -66,21 +66,19 @@ function generateTimeOptions(): string[] {
   }
   return times
 }
-const TIME_OPTIONS  = generateTimeOptions()
-const DAYS_LABELS   = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+const TIME_OPTIONS = generateTimeOptions()
+const DAYS_LABELS  = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
-/* ─── Light styles ───────────────────────────────────────────────────────────── */
+/* ─── Light input styles ─────────────────────────────────────────────────────── */
 const inputCls  = 'w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-[#25B3CC] rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 text-sm outline-none transition-all focus:ring-2 focus:ring-[#25B3CC]/15'
 const selectCls = 'w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-[#25B3CC] rounded-xl px-4 py-3 text-sm outline-none transition-all appearance-none cursor-pointer text-gray-900 focus:ring-2 focus:ring-[#25B3CC]/15'
 
-/* ─── Sections config ────────────────────────────────────────────────────────── */
+/* ─── Sections ───────────────────────────────────────────────────────────────── */
 const SECTIONS = [
-  { id: 'nombre',      label: 'NOMBRE',      title: 'Nombre del negocio' },
-  { id: 'categorias',  label: 'CATEGORÍAS',  title: 'Categorías' },
-  { id: 'horario',     label: 'HORARIO',     title: 'Horario de atención' },
-  { id: 'ubicacion',   label: 'UBICACIÓN',   title: 'Ubicación' },
-  { id: 'descripcion', label: 'DESCRIPCIÓN', title: 'Descripción del negocio' },
-  { id: 'contactos',   label: 'CONTACTO',    title: 'Contactos' },
+  { label: 'NEGOCIO',   title: 'Tu negocio' },
+  { label: 'UBICACIÓN', title: 'Ubicación' },
+  { label: 'HORARIOS',  title: 'Horarios y comodidades' },
+  { label: 'CONTACTO',  title: 'Contacto' },
 ]
 
 /* ─── Auth Screen ────────────────────────────────────────────────────────────── */
@@ -122,8 +120,7 @@ const AuthScreen: React.FC = () => {
 
             <div className="space-y-3">
               <button
-                onClick={() => signIn('google')}
-                disabled={!!loading}
+                onClick={() => signIn('google')} disabled={!!loading}
                 className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl transition-all disabled:opacity-70"
               >
                 {loading === 'google' ? <Loader2 className="w-5 h-5 animate-spin text-gray-400" /> : (
@@ -138,8 +135,7 @@ const AuthScreen: React.FC = () => {
               </button>
 
               <button
-                onClick={() => signIn('apple')}
-                disabled={!!loading}
+                onClick={() => signIn('apple')} disabled={!!loading}
                 className="w-full flex items-center justify-center gap-3 bg-black hover:bg-gray-900 text-white font-medium py-3 rounded-xl transition-all disabled:opacity-70"
               >
                 {loading === 'apple' ? <Loader2 className="w-5 h-5 animate-spin" /> : (
@@ -173,52 +169,47 @@ const AuthScreen: React.FC = () => {
 
 /* ─── Accordion Section wrapper ──────────────────────────────────────────────── */
 function AccordionSection({
-  index, title, summary, isActive, isCompleted, isLocked,
-  onEdit, children, error,
+  index, title, summary, isActive, isCompleted, onEdit, children, error,
 }: {
   index:       number
   title:       string
   summary:     string
   isActive:    boolean
   isCompleted: boolean
-  isLocked:    boolean
   onEdit:      () => void
   children:    React.ReactNode
   error?:      string | null
 }) {
+  const isLocked = !isActive && !isCompleted
+
   return (
     <div className={`bg-white rounded-2xl border transition-all ${
-      isActive    ? 'border-[#25B3CC]/60 shadow-sm shadow-[#25B3CC]/10'
+      isActive     ? 'border-[#25B3CC]/50 shadow-sm'
       : isCompleted ? 'border-green-200'
-      : 'border-gray-100'
+      :               'border-gray-100'
     }`}>
-      {/* Section header */}
-      <div className={`flex items-center gap-3 px-5 py-4 ${isCompleted ? 'bg-green-50 rounded-2xl' : ''} ${isActive ? 'border-b border-[#25B3CC]/15' : ''}`}>
-        {/* Circle */}
+      <div className={`flex items-center gap-3 px-5 py-4 ${
+        isCompleted ? 'bg-green-50 rounded-2xl' : ''
+      } ${isActive ? 'border-b border-[#25B3CC]/15' : ''}`}>
         <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold transition-all ${
           isCompleted ? 'bg-green-500 text-white'
           : isActive  ? 'bg-[#25B3CC] text-white'
-          : 'bg-gray-100 text-gray-400'
+          :             'bg-gray-100 text-gray-400'
         }`}>
           {isCompleted ? <Check className="w-4 h-4" /> : index + 1}
         </div>
 
-        {/* Title + summary */}
         <div className="flex-1 min-w-0">
           <span className={`font-semibold text-sm ${isLocked ? 'text-gray-400' : 'text-gray-900'}`}>
             {title}
           </span>
-          {isCompleted && (
+          {isCompleted && summary && (
             <p className="text-gray-500 text-xs mt-0.5 truncate">{summary}</p>
           )}
         </div>
 
-        {/* Edit or chevron */}
         {isCompleted ? (
-          <button
-            onClick={onEdit}
-            className="text-[#25B3CC] text-xs font-semibold hover:text-[#1E9DB5] transition-colors flex-shrink-0"
-          >
+          <button onClick={onEdit} className="text-[#25B3CC] text-xs font-semibold hover:text-[#1E9DB5] transition-colors flex-shrink-0">
             EDITAR
           </button>
         ) : isActive ? (
@@ -228,7 +219,6 @@ function AccordionSection({
         )}
       </div>
 
-      {/* Expanded content */}
       {isActive && (
         <div className="px-5 pb-5 pt-4">
           {children}
@@ -244,42 +234,21 @@ function AccordionSection({
   )
 }
 
-/* ─── Continuar button ───────────────────────────────────────────────────────── */
 function ContinuarBtn({ onClick, loading = false, label = 'Continuar' }: {
   onClick: () => void; loading?: boolean; label?: string
 }) {
   return (
     <button
-      onClick={onClick}
-      disabled={loading}
+      onClick={onClick} disabled={loading}
       className="flex items-center gap-2 bg-[#25B3CC] hover:bg-[#1E9DB5] text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition-all mt-5 disabled:opacity-70"
     >
-      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-        <>{label} <ChevronRight className="w-4 h-4" /></>
-      )}
+      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{label} <ChevronRight className="w-4 h-4" /></>}
     </button>
   )
 }
 
-/* ─── Section 1 — Nombre ─────────────────────────────────────────────────────── */
-function SectionNombre({ data, set }: { data: WizardData; set: (k: keyof WizardData, v: any) => void }) {
-  return (
-    <div>
-      <p className="text-gray-500 text-sm mb-3">Nombre que aparecerá en la app</p>
-      <input
-        className={inputCls}
-        placeholder="Ej. Bolera La Estación"
-        value={data.business_name}
-        onChange={e => set('business_name', e.target.value)}
-        maxLength={100}
-        autoFocus
-      />
-    </div>
-  )
-}
-
-/* ─── Section 2 — Categorías ─────────────────────────────────────────────────── */
-function SectionCategorias({
+/* ─── Step 1 — Tu negocio ────────────────────────────────────────────────────── */
+function Step1({
   data, set, categories, cuisineTypes,
 }: {
   data: WizardData; set: (k: keyof WizardData, v: any) => void
@@ -290,128 +259,102 @@ function SectionCategorias({
     set(key, arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id])
   }
 
-  if (categories.length === 0) return (
-    <div className="flex items-center gap-2 text-gray-400 text-sm py-2">
-      <Loader2 className="w-4 h-4 animate-spin" /> Cargando categorías...
-    </div>
-  )
-
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-gray-500 text-sm mb-3">¿Qué ofreces? Puedes elegir una o varias.</p>
-        <div className="flex flex-wrap gap-2">
-          {categories.map(cat => (
-            <button
-              key={cat.id} type="button"
-              onClick={() => toggle('category_ids', cat.id)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
-                data.category_ids.includes(cat.id)
-                  ? 'bg-[#25B3CC]/10 border-[#25B3CC] text-[#25B3CC]'
-                  : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+          Nombre del negocio <span className="text-[#25B3CC]">*</span>
+        </label>
+        <input
+          className={inputCls}
+          placeholder="Ej. El Rincón Bogotano"
+          value={data.business_name}
+          onChange={e => set('business_name', e.target.value)}
+          maxLength={100}
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          Categorías <span className="text-[#25B3CC]">*</span>
+        </label>
+        {categories.length === 0 ? (
+          <div className="flex items-center gap-2 text-gray-400 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" /> Cargando...
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {categories.map(cat => (
+              <button key={cat.id} type="button" onClick={() => toggle('category_ids', cat.id)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+                  data.category_ids.includes(cat.id)
+                    ? 'bg-[#25B3CC]/10 border-[#25B3CC] text-[#25B3CC]'
+                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}>
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {cuisineTypes.length > 0 && (
         <div>
-          <p className="text-gray-500 text-sm mb-3">Tipo de cocina (opcional)</p>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            Tipo de cocina
+          </label>
           <div className="flex flex-wrap gap-2">
             {cuisineTypes.map(ct => (
-              <button
-                key={ct.id} type="button"
-                onClick={() => toggle('cuisine_type_ids', ct.id)}
+              <button key={ct.id} type="button" onClick={() => toggle('cuisine_type_ids', ct.id)}
                 className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
                   data.cuisine_type_ids.includes(ct.id)
                     ? 'bg-[#25B3CC]/10 border-[#25B3CC] text-[#25B3CC]'
                     : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                }`}
-              >
+                }`}>
                 {ct.name}
               </button>
             ))}
           </div>
         </div>
       )}
-    </div>
-  )
-}
 
-/* ─── Section 3 — Horario ────────────────────────────────────────────────────── */
-function SectionHorario({ data, set }: { data: WizardData; set: (k: keyof WizardData, v: any) => void }) {
-  const updateHour = (weekday: number, field: keyof HourEntry, value: any) =>
-    set('business_hours', data.business_hours.map(h =>
-      h.weekday === weekday ? { ...h, [field]: value } : h
-    ))
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+          Descripción <span className="text-[#25B3CC]">*</span>
+        </label>
+        <textarea
+          className={`${inputCls} resize-none`}
+          rows={4}
+          placeholder="Describe qué hace especial a tu negocio, qué experiencia ofreces..."
+          value={data.description}
+          onChange={e => set('description', e.target.value)}
+          maxLength={500}
+        />
+        <div className="text-right text-gray-400 text-[11px] mt-1">{data.description.length}/500</div>
+      </div>
 
-  return (
-    <div>
-      <p className="text-gray-500 text-sm mb-3">Indica los días y horarios en que atiendes.</p>
-      <div className="border border-gray-100 rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[80px_48px_1fr_1fr] gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100">
-          <span className="text-gray-400 text-[11px] font-semibold uppercase">Día</span>
-          <span className="text-gray-400 text-[11px] font-semibold uppercase text-center">Abre</span>
-          <span className="text-gray-400 text-[11px] font-semibold uppercase text-center">Desde</span>
-          <span className="text-gray-400 text-[11px] font-semibold uppercase text-center">Hasta</span>
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+          Precio promedio por persona (COP)
+        </label>
+        <div className="relative">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+          <input
+            className={`${inputCls} pl-7`}
+            type="number" placeholder="Ej. 45000"
+            value={data.mean_price}
+            onChange={e => set('mean_price', e.target.value)}
+            min="0"
+          />
         </div>
-        {data.business_hours.map((h, i) => (
-          <div
-            key={h.weekday}
-            className={`grid grid-cols-[80px_48px_1fr_1fr] gap-2 items-center px-4 py-2.5 ${
-              i < data.business_hours.length - 1 ? 'border-b border-gray-50' : ''
-            }`}
-          >
-            <span className={`text-sm font-medium ${h.open ? 'text-gray-800' : 'text-gray-400'}`}>
-              {DAYS_LABELS[h.weekday - 1]}
-            </span>
-
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={() => updateHour(h.weekday, 'open', !h.open)}
-                className={`w-9 h-5 rounded-full transition-all relative flex-shrink-0 ${
-                  h.open ? 'bg-[#25B3CC]' : 'bg-gray-200'
-                }`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
-                  h.open ? 'left-4' : 'left-0.5'
-                }`} />
-              </button>
-            </div>
-
-            {h.open ? (
-              <>
-                <select
-                  className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-gray-800 text-xs outline-none focus:border-[#25B3CC] appearance-none"
-                  value={h.start_time}
-                  onChange={e => updateHour(h.weekday, 'start_time', e.target.value)}
-                >
-                  {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <select
-                  className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-gray-800 text-xs outline-none focus:border-[#25B3CC] appearance-none"
-                  value={h.end_time}
-                  onChange={e => updateHour(h.weekday, 'end_time', e.target.value)}
-                >
-                  {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </>
-            ) : (
-              <span className="col-span-2 text-gray-400 text-xs text-center">Cerrado</span>
-            )}
-          </div>
-        ))}
+        <p className="text-gray-400 text-[11px] mt-1">Precio aproximado por persona (opcional)</p>
       </div>
     </div>
   )
 }
 
-/* ─── Section 4 — Ubicación ──────────────────────────────────────────────────── */
-function SectionUbicacion({
+/* ─── Step 2 — Ubicación ─────────────────────────────────────────────────────── */
+function Step2({
   data, set, zones,
 }: {
   data: WizardData; set: (k: keyof WizardData, v: any) => void; zones: Zone[]
@@ -479,7 +422,9 @@ function SectionUbicacion({
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-gray-500 text-sm mb-3">¿Dónde está tu negocio en Bogotá?</p>
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+          Dirección <span className="text-[#25B3CC]">*</span>
+        </label>
         <div className="relative">
           <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -492,10 +437,7 @@ function SectionUbicacion({
         </div>
       </div>
 
-      <div
-        ref={mapRef}
-        className="w-full h-40 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center"
-      >
+      <div ref={mapRef} className="w-full h-44 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center">
         {!hasKey && (
           <div className="flex items-center gap-2 text-gray-400 text-sm">
             <MapPin className="w-4 h-4" /> Mapa disponible con Google Maps API Key
@@ -503,17 +445,29 @@ function SectionUbicacion({
         )}
       </div>
 
-      <div className="relative">
-        <select
-          className={`${selectCls} ${!data.zone_id ? 'text-gray-400' : ''}`}
-          value={data.zone_id ?? ''}
-          onChange={e => set('zone_id', e.target.value ? Number(e.target.value) : null)}
-        >
-          <option value="">Selecciona la zona de Bogotá</option>
-          {zones.length === 0 && <option disabled>Cargando zonas...</option>}
-          {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
-        </select>
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+      {data.location_lat && (
+        <p className="text-gray-500 text-xs flex items-center gap-1.5">
+          <Check className="w-3 h-3 text-[#25B3CC]" />
+          Puedes arrastrar el pin para afinar la posición.
+        </p>
+      )}
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+          Zona de Bogotá <span className="text-[#25B3CC]">*</span>
+        </label>
+        <div className="relative">
+          <select
+            className={`${selectCls} ${!data.zone_id ? 'text-gray-400' : ''}`}
+            value={data.zone_id ?? ''}
+            onChange={e => set('zone_id', e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">Selecciona la zona</option>
+            {zones.length === 0 && <option disabled>Cargando zonas...</option>}
+            {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        </div>
       </div>
 
       {data.location_lat && data.location_lng && (
@@ -528,61 +482,92 @@ function SectionUbicacion({
   )
 }
 
-/* ─── Section 5 — Descripción ────────────────────────────────────────────────── */
-function SectionDescripcion({
+/* ─── Step 3 — Horarios & Comodidades ───────────────────────────────────────── */
+function Step3({
   data, set, amenities,
 }: {
   data: WizardData; set: (k: keyof WizardData, v: any) => void; amenities: Amenity[]
 }) {
+  const updateHour = (weekday: number, field: keyof HourEntry, value: any) =>
+    set('business_hours', data.business_hours.map(h =>
+      h.weekday === weekday ? { ...h, [field]: value } : h
+    ))
+
   const toggleAmenity = (id: number) => {
     const ids = data.amenity_ids
     set('amenity_ids', ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id])
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div>
-        <p className="text-gray-500 text-sm mb-3">Cuéntanos qué hace especial a tu negocio.</p>
-        <textarea
-          className={`${inputCls} resize-none`}
-          rows={4}
-          placeholder="Describe qué experiencia ofreces, qué te diferencia..."
-          value={data.description}
-          onChange={e => set('description', e.target.value)}
-          maxLength={500}
-        />
-        <div className="text-right text-gray-400 text-[11px] mt-1">{data.description.length}/500</div>
-      </div>
-
-      <div>
-        <p className="text-gray-500 text-sm mb-2">Precio promedio por persona (COP) — opcional</p>
-        <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-          <input
-            className={`${inputCls} pl-7`}
-            type="number" placeholder="Ej. 45000"
-            value={data.mean_price}
-            onChange={e => set('mean_price', e.target.value)}
-            min="0"
-          />
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          Horarios de atención <span className="text-[#25B3CC]">*</span>
+        </label>
+        <div className="border border-gray-100 rounded-xl overflow-hidden">
+          <div className="grid grid-cols-[80px_48px_1fr_1fr] gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+            <span className="text-gray-400 text-[11px] font-semibold uppercase">Día</span>
+            <span className="text-gray-400 text-[11px] font-semibold uppercase text-center">Abre</span>
+            <span className="text-gray-400 text-[11px] font-semibold uppercase text-center">Desde</span>
+            <span className="text-gray-400 text-[11px] font-semibold uppercase text-center">Hasta</span>
+          </div>
+          {data.business_hours.map((h, i) => (
+            <div
+              key={h.weekday}
+              className={`grid grid-cols-[80px_48px_1fr_1fr] gap-2 items-center px-4 py-2.5 ${
+                i < data.business_hours.length - 1 ? 'border-b border-gray-50' : ''
+              }`}
+            >
+              <span className={`text-sm font-medium ${h.open ? 'text-gray-800' : 'text-gray-400'}`}>
+                {DAYS_LABELS[h.weekday - 1]}
+              </span>
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => updateHour(h.weekday, 'open', !h.open)}
+                  className={`w-9 h-5 rounded-full transition-all relative flex-shrink-0 ${h.open ? 'bg-[#25B3CC]' : 'bg-gray-200'}`}
+                >
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${h.open ? 'left-4' : 'left-0.5'}`} />
+                </button>
+              </div>
+              {h.open ? (
+                <>
+                  <select
+                    className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-gray-800 text-xs outline-none focus:border-[#25B3CC] appearance-none"
+                    value={h.start_time}
+                    onChange={e => updateHour(h.weekday, 'start_time', e.target.value)}
+                  >
+                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <select
+                    className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-gray-800 text-xs outline-none focus:border-[#25B3CC] appearance-none"
+                    value={h.end_time}
+                    onChange={e => updateHour(h.weekday, 'end_time', e.target.value)}
+                  >
+                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </>
+              ) : (
+                <span className="col-span-2 text-gray-400 text-xs text-center">Cerrado</span>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
       {amenities.length > 0 && (
         <div>
-          <p className="text-gray-500 text-sm mb-3">Comodidades y servicios (opcional)</p>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            Comodidades y servicios
+          </label>
           <div className="flex flex-wrap gap-2">
             {amenities.map(a => (
-              <button
-                key={a.id} type="button"
-                onClick={() => toggleAmenity(a.id)}
-                title={a.description}
+              <button key={a.id} type="button" onClick={() => toggleAmenity(a.id)} title={a.description}
                 className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
                   data.amenity_ids.includes(a.id)
                     ? 'bg-[#25B3CC]/10 border-[#25B3CC] text-[#25B3CC]'
                     : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                }`}
-              >
+                }`}>
                 {a.name}
               </button>
             ))}
@@ -593,31 +578,69 @@ function SectionDescripcion({
   )
 }
 
-/* ─── Section 6 — Contactos ──────────────────────────────────────────────────── */
-function SectionContactos({ data, set }: { data: WizardData; set: (k: keyof WizardData, v: any) => void }) {
+/* ─── Step 4 — Contacto + Resumen ────────────────────────────────────────────── */
+function Step4({
+  data, set, categories, zones,
+}: {
+  data: WizardData; set: (k: keyof WizardData, v: any) => void
+  categories: Category[]; zones: Zone[]
+}) {
+  const openDays     = data.business_hours.filter(h => h.open)
+  const selectedCats = categories.filter(c => data.category_ids.includes(c.id))
+  const selectedZone = zones.find(z => z.id === data.zone_id)
+
   return (
-    <div className="space-y-4">
-      <p className="text-gray-500 text-sm">Mínimo un número de contacto.</p>
+    <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {[
-          { icon: Phone,         key: 'phone',     label: 'Teléfono',   placeholder: '+57 310 000 0000' },
-          { icon: MessageCircle, key: 'whatsapp',  label: 'WhatsApp',   placeholder: '+57 310 000 0000' },
-          { icon: Globe,         key: 'website',   label: 'Sitio web',  placeholder: 'www.tunegocio.com' },
-          { icon: Instagram,     key: 'instagram', label: 'Instagram',  placeholder: '@tunegocio' },
+          { icon: Phone,         key: 'phone',     label: 'Teléfono',  placeholder: '+57 310 000 0000' },
+          { icon: MessageCircle, key: 'whatsapp',  label: 'WhatsApp',  placeholder: '+57 310 000 0000' },
+          { icon: Globe,         key: 'website',   label: 'Sitio web', placeholder: 'www.tunegocio.com' },
+          { icon: Instagram,     key: 'instagram', label: 'Instagram', placeholder: '@tunegocio' },
         ].map(({ icon: Icon, key, label, placeholder }) => (
           <div key={key}>
-            <label className="text-xs font-medium text-gray-500 mb-1.5 block">{label}</label>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{label}</label>
             <div className="relative">
               <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
-                className={`${inputCls} pl-10`}
-                placeholder={placeholder}
+                className={`${inputCls} pl-10`} placeholder={placeholder}
                 value={(data as any)[key]}
                 onChange={e => set(key as keyof WizardData, e.target.value)}
               />
             </div>
           </div>
         ))}
+      </div>
+      <p className="text-gray-400 text-xs">Mínimo un número de contacto — teléfono o WhatsApp.</p>
+
+      {/* Summary */}
+      <div className="bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-[#25B3CC]" />
+          <span className="text-gray-800 text-sm font-semibold">Resumen de tu solicitud</span>
+        </div>
+        <div className="divide-y divide-gray-50">
+          {[
+            { label: 'Nombre',     value: data.business_name || '—' },
+            { label: 'Categorías', value: selectedCats.map(c => c.name).join(', ') || '—' },
+            { label: 'Dirección',  value: data.address || '—' },
+            { label: 'Zona',       value: selectedZone?.name || '—' },
+            { label: 'Días',       value: openDays.length > 0 ? `${openDays.length} día(s) de atención` : '—' },
+          ].map((row, i) => (
+            <div key={i} className="flex items-center justify-between px-5 py-3">
+              <span className="text-gray-400 text-xs">{row.label}</span>
+              <span className="text-gray-800 text-xs font-medium max-w-[200px] text-right truncate">{row.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-[#25B3CC]/8 border border-[#25B3CC]/20 rounded-2xl px-5 py-4 flex items-start gap-3">
+        <Sparkles className="w-4 h-4 text-[#25B3CC] shrink-0 mt-0.5" />
+        <p className="text-gray-600 text-sm leading-relaxed">
+          Al enviar, tu solicitud queda en revisión. Te confirmaremos en máximo{' '}
+          <span className="text-gray-900 font-semibold">48 horas hábiles</span>.
+        </p>
       </div>
     </div>
   )
@@ -659,10 +682,8 @@ export default function RegisterWizard() {
 
   const checkExisting = async (authId: string) => {
     const { data } = await supabase
-      .from('business_registration')
-      .select('status')
-      .eq('auth_id', authId)
-      .maybeSingle()
+      .from('business_registration').select('status')
+      .eq('auth_id', authId).maybeSingle()
     if (data) setExistingStatus(data.status)
   }
 
@@ -689,30 +710,35 @@ export default function RegisterWizard() {
 
   /* ── Validation ── */
   const validate = (idx: number): string | null => {
-    if (idx === 0 && !data.business_name.trim()) return 'El nombre del negocio es obligatorio.'
-    if (idx === 1 && data.category_ids.length === 0) return 'Selecciona al menos una categoría.'
-    if (idx === 2 && data.business_hours.filter(h => h.open).length === 0) return 'Selecciona al menos un día de atención.'
-    if (idx === 3 && !data.address.trim()) return 'La dirección es obligatoria.'
-    if (idx === 3 && !data.zone_id) return 'Selecciona la zona de Bogotá.'
-    if (idx === 4 && !data.description.trim()) return 'La descripción es obligatoria.'
-    if (idx === 5 && !data.phone.trim() && !data.whatsapp.trim()) return 'Ingresa al menos un número de contacto.'
+    if (idx === 0) {
+      if (!data.business_name.trim())     return 'El nombre del negocio es obligatorio.'
+      if (data.category_ids.length === 0) return 'Selecciona al menos una categoría.'
+      if (!data.description.trim())       return 'La descripción es obligatoria.'
+    }
+    if (idx === 1) {
+      if (!data.address.trim()) return 'La dirección es obligatoria.'
+      if (!data.zone_id)        return 'Selecciona la zona de Bogotá.'
+    }
+    if (idx === 2) {
+      if (data.business_hours.filter(h => h.open).length === 0)
+        return 'Selecciona al menos un día de atención.'
+    }
+    if (idx === 3) {
+      if (!data.phone.trim() && !data.whatsapp.trim())
+        return 'Ingresa al menos un número de contacto (teléfono o WhatsApp).'
+    }
     return null
   }
 
-  /* ── Section summary ── */
+  /* ── Summary per section ── */
   const getSummary = (idx: number): string => {
     if (idx === 0) return data.business_name
-    if (idx === 1) {
-      const names = categories.filter(c => data.category_ids.includes(c.id)).map(c => c.name)
-      return names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', ')
-    }
+    if (idx === 1) return data.address.length > 50 ? data.address.slice(0, 50) + '…' : data.address
     if (idx === 2) {
       const open = data.business_hours.filter(h => h.open)
       return `${open.length} día${open.length !== 1 ? 's' : ''} de atención`
     }
-    if (idx === 3) return data.address.length > 50 ? data.address.slice(0, 50) + '...' : data.address
-    if (idx === 4) return data.description.length > 50 ? data.description.slice(0, 50) + '...' : data.description
-    if (idx === 5) return data.phone || data.whatsapp || data.website || data.instagram || ''
+    if (idx === 3) return data.phone || data.whatsapp || data.website || data.instagram || ''
     return ''
   }
 
@@ -732,7 +758,7 @@ export default function RegisterWizard() {
 
   /* ── Submit ── */
   const handleSubmit = async () => {
-    const err = validate(5)
+    const err = validate(3)
     if (err) { setSectionError(err); return }
     setSubmitting(true); setSectionError(null)
 
@@ -770,81 +796,54 @@ export default function RegisterWizard() {
   }
 
   /* ── Loading ── */
-  if (!authChecked) {
-    return (
-      <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-[#25B3CC] animate-spin" />
-      </div>
-    )
-  }
+  if (!authChecked) return (
+    <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center">
+      <Loader2 className="w-6 h-6 text-[#25B3CC] animate-spin" />
+    </div>
+  )
 
   if (!session) return <AuthScreen />
 
   /* ── Existing status screens ── */
-  if (existingStatus === 'pending') {
-    return (
-      <div className="min-h-screen bg-[#F5F7F9] flex flex-col">
-        <div className="bg-[#25B3CC] px-6 py-5">
-          <div className="max-w-lg mx-auto">
-            <h1 className="text-white text-xl font-bold">Tu solicitud</h1>
+  if (existingStatus === 'pending') return (
+    <div className="min-h-screen bg-[#F5F7F9] flex flex-col">
+      <div className="bg-[#25B3CC] px-6 py-5"><h1 className="text-white text-xl font-bold max-w-2xl mx-auto">Tu solicitud</h1></div>
+      <div className="flex-1 flex items-center justify-center px-6">
+        <div className="text-center max-w-sm bg-white rounded-2xl border border-gray-100 shadow-sm p-10">
+          <div className="w-16 h-16 rounded-full bg-yellow-100 border-2 border-yellow-300 flex items-center justify-center mx-auto mb-5">
+            <Clock className="w-8 h-8 text-yellow-500" />
           </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="text-center max-w-sm bg-white rounded-2xl border border-gray-100 shadow-sm p-10">
-            <div className="w-16 h-16 rounded-full bg-yellow-100 border-2 border-yellow-300 flex items-center justify-center mx-auto mb-5">
-              <Clock className="w-8 h-8 text-yellow-500" />
-            </div>
-            <h2 className="text-gray-900 text-xl font-bold mb-3">Tu solicitud está en revisión</h2>
-            <p className="text-gray-500 text-sm leading-relaxed mb-6">
-              Ya enviaste una solicitud. Nuestro equipo la está revisando y te contactaremos pronto.
-            </p>
-            <a href="/" className="text-[#25B3CC] hover:text-[#1E9DB5] text-sm font-medium transition-colors">
-              ← Volver al inicio
-            </a>
-          </div>
+          <h2 className="text-gray-900 text-xl font-bold mb-3">Tu solicitud está en revisión</h2>
+          <p className="text-gray-500 text-sm leading-relaxed mb-6">Nuestro equipo la está revisando y te contactaremos pronto.</p>
+          <a href="/" className="text-[#25B3CC] hover:text-[#1E9DB5] text-sm font-medium">← Volver al inicio</a>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
 
-  if (existingStatus === 'approved') {
-    return (
-      <div className="min-h-screen bg-[#F5F7F9] flex flex-col">
-        <div className="bg-[#25B3CC] px-6 py-5">
-          <div className="max-w-lg mx-auto">
-            <h1 className="text-white text-xl font-bold">Tu negocio en WAVI</h1>
+  if (existingStatus === 'approved') return (
+    <div className="min-h-screen bg-[#F5F7F9] flex flex-col">
+      <div className="bg-[#25B3CC] px-6 py-5"><h1 className="text-white text-xl font-bold max-w-2xl mx-auto">Tu negocio en WAVI</h1></div>
+      <div className="flex-1 flex items-center justify-center px-6">
+        <div className="text-center max-w-sm bg-white rounded-2xl border border-gray-100 shadow-sm p-10">
+          <div className="w-16 h-16 rounded-full bg-[#25B3CC]/15 border-2 border-[#25B3CC] flex items-center justify-center mx-auto mb-5">
+            <CheckCircle2 className="w-8 h-8 text-[#25B3CC]" />
           </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="text-center max-w-sm bg-white rounded-2xl border border-gray-100 shadow-sm p-10">
-            <div className="w-16 h-16 rounded-full bg-[#25B3CC]/15 border-2 border-[#25B3CC] flex items-center justify-center mx-auto mb-5">
-              <CheckCircle2 className="w-8 h-8 text-[#25B3CC]" />
-            </div>
-            <h2 className="text-gray-900 text-xl font-bold mb-3">¡Ya estás en WAVI!</h2>
-            <p className="text-gray-500 text-sm leading-relaxed mb-6">
-              Tu negocio ya fue aprobado y está activo en la plataforma.
-            </p>
-            <a href="/" className="text-[#25B3CC] hover:text-[#1E9DB5] text-sm font-medium transition-colors">
-              ← Volver al inicio
-            </a>
-          </div>
+          <h2 className="text-gray-900 text-xl font-bold mb-3">¡Ya estás en WAVI!</h2>
+          <p className="text-gray-500 text-sm leading-relaxed mb-6">Tu negocio ya fue aprobado y está activo en la plataforma.</p>
+          <a href="/" className="text-[#25B3CC] hover:text-[#1E9DB5] text-sm font-medium">← Volver al inicio</a>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
 
-  /* ── Progress ── */
-  const progressPct   = Math.round((completed.size / SECTIONS.length) * 100)
-  const allCompleted  = completed.size === SECTIONS.length
+  const progressPct  = Math.round((completed.size / SECTIONS.length) * 100)
 
-  /* ── Section content map ── */
   const sectionContent: Record<number, React.ReactNode> = {
-    0: <SectionNombre      data={data} set={set} />,
-    1: <SectionCategorias  data={data} set={set} categories={categories} cuisineTypes={cuisineTypes} />,
-    2: <SectionHorario     data={data} set={set} />,
-    3: <SectionUbicacion   data={data} set={set} zones={zones} />,
-    4: <SectionDescripcion data={data} set={set} amenities={amenities} />,
-    5: <SectionContactos   data={data} set={set} />,
+    0: <Step1 data={data} set={set} categories={categories} cuisineTypes={cuisineTypes} />,
+    1: <Step2 data={data} set={set} zones={zones} />,
+    2: <Step3 data={data} set={set} amenities={amenities} />,
+    3: <Step4 data={data} set={set} categories={categories} zones={zones} />,
   }
 
   return (
@@ -852,46 +851,36 @@ export default function RegisterWizard() {
 
       {/* ── Teal header ── */}
       <div className="bg-[#25B3CC] sticky top-0 z-20">
-        <div className="max-w-2xl mx-auto px-5 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <a href="/" className="text-white/80 hover:text-white transition-colors">
-                <ArrowLeft className="w-5 h-5" />
-              </a>
-              <div>
-                <p className="text-white font-bold text-sm leading-tight">Información del negocio</p>
-                <p className="text-white/75 text-xs">
-                  {completed.size} de {SECTIONS.length} · {progressPct}%
-                </p>
-              </div>
-            </div>
-            <div className="text-white/80 text-xs font-medium">
-              {completed.size}/{SECTIONS.length}
+        <div className="max-w-2xl mx-auto px-5 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <a href="/" className="text-white/80 hover:text-white transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </a>
+            <div>
+              <p className="text-white font-bold text-sm leading-tight">Información del negocio</p>
+              <p className="text-white/75 text-xs">
+                Paso {Math.min(activeSection + 1, SECTIONS.length)} de {SECTIONS.length} · {progressPct}%
+              </p>
             </div>
           </div>
+          <span className="text-white/80 text-xs font-medium">{completed.size}/{SECTIONS.length}</span>
         </div>
-        {/* Progress bar */}
         <div className="h-1 bg-white/20">
-          <div
-            className="h-full bg-white transition-all duration-500"
-            style={{ width: `${progressPct}%` }}
-          />
+          <div className="h-full bg-white transition-all duration-500" style={{ width: `${progressPct}%` }} />
         </div>
       </div>
 
       {/* ── Step dots ── */}
-      <div className="bg-white border-b border-gray-100 sticky top-[65px] z-10">
+      <div className="bg-white border-b border-gray-100 sticky top-[61px] z-10">
         <div className="max-w-2xl mx-auto px-5 py-3">
-          <div className="flex items-center gap-0">
+          <div className="flex items-center">
             {SECTIONS.map((s, i) => (
-              <React.Fragment key={s.id}>
+              <React.Fragment key={s.label}>
                 <div className="flex flex-col items-center gap-1 flex-shrink-0">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
-                    completed.has(i)
-                      ? 'bg-green-500 border-green-500 text-white'
-                      : i === activeSection
-                      ? 'bg-[#25B3CC] border-[#25B3CC] text-white'
-                      : 'bg-white border-gray-200 text-gray-400'
+                    completed.has(i) ? 'bg-green-500 border-green-500 text-white'
+                    : i === activeSection ? 'bg-[#25B3CC] border-[#25B3CC] text-white'
+                    : 'bg-white border-gray-200 text-gray-400'
                   }`}>
                     {completed.has(i) ? <Check className="w-3.5 h-3.5" /> : i + 1}
                   </div>
@@ -904,7 +893,7 @@ export default function RegisterWizard() {
                   </span>
                 </div>
                 {i < SECTIONS.length - 1 && (
-                  <div className={`flex-1 h-px mx-1 transition-all duration-500 ${completed.has(i) ? 'bg-green-300' : 'bg-gray-100'}`} />
+                  <div className={`flex-1 h-px mx-1.5 transition-all duration-500 ${completed.has(i) ? 'bg-green-300' : 'bg-gray-100'}`} />
                 )}
               </React.Fragment>
             ))}
@@ -921,43 +910,30 @@ export default function RegisterWizard() {
 
         {SECTIONS.map((s, i) => (
           <AccordionSection
-            key={s.id}
+            key={s.label}
             index={i}
             title={s.title}
             summary={getSummary(i)}
             isActive={activeSection === i && !completed.has(i)}
             isCompleted={completed.has(i)}
-            isLocked={i > activeSection && !completed.has(i)}
             onEdit={() => handleEdit(i)}
             error={activeSection === i ? sectionError : null}
           >
             {sectionContent[i]}
 
-            {/* Action button */}
             {i < SECTIONS.length - 1 ? (
               <ContinuarBtn onClick={() => handleContinuar(i)} />
             ) : (
-              <div className="mt-5 space-y-4">
-                <div className="bg-[#25B3CC]/8 border border-[#25B3CC]/20 rounded-xl px-4 py-3 flex items-start gap-3">
-                  <Sparkles className="w-4 h-4 text-[#25B3CC] shrink-0 mt-0.5" />
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    Al enviar, tu solicitud queda en revisión. Te confirmaremos en máximo{' '}
-                    <span className="text-gray-900 font-semibold">48 horas hábiles</span>.
-                  </p>
-                </div>
-                {allCompleted ? (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={submitting}
-                    className="w-full flex items-center justify-center gap-2 bg-[#25B3CC] hover:bg-[#1E9DB5] text-white font-bold py-3.5 rounded-xl transition-all text-sm disabled:opacity-70"
-                  >
-                    {submitting
-                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
-                      : <><Sparkles className="w-4 h-4" /> Enviar solicitud</>}
-                  </button>
-                ) : (
-                  <ContinuarBtn onClick={() => handleContinuar(i)} label="Guardar contactos" />
-                )}
+              <div className="mt-5 space-y-3">
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="w-full flex items-center justify-center gap-2 bg-[#25B3CC] hover:bg-[#1E9DB5] text-white font-bold py-3.5 rounded-xl transition-all text-sm disabled:opacity-70"
+                >
+                  {submitting
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                    : <><Sparkles className="w-4 h-4" /> Enviar solicitud</>}
+                </button>
               </div>
             )}
           </AccordionSection>
