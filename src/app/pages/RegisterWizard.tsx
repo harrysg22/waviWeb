@@ -188,9 +188,12 @@ function AccordionSection({
       : isCompleted ? 'border-green-200'
       :               'border-gray-100'
     }`}>
-      <div className={`flex items-center gap-3 px-5 py-4 ${
-        isCompleted ? 'bg-green-50 rounded-2xl' : ''
-      } ${isActive ? 'border-b border-[#25B3CC]/15' : ''}`}>
+      <div
+        className={`flex items-center gap-3 px-5 py-4 ${
+          isCompleted ? 'bg-green-50 rounded-2xl cursor-pointer hover:bg-green-100 transition-colors' : ''
+        } ${isActive ? 'border-b border-[#25B3CC]/15' : ''}`}
+        onClick={isCompleted ? onEdit : undefined}
+      >
         <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold transition-all ${
           isCompleted ? 'bg-green-500 text-white'
           : isActive  ? 'bg-[#25B3CC] text-white'
@@ -209,9 +212,7 @@ function AccordionSection({
         </div>
 
         {isCompleted ? (
-          <button onClick={onEdit} className="text-[#25B3CC] text-xs font-semibold hover:text-[#1E9DB5] transition-colors flex-shrink-0">
-            EDITAR
-          </button>
+          <span className="text-[#25B3CC] text-xs font-semibold flex-shrink-0">EDITAR</span>
         ) : isActive ? (
           <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
         ) : (
@@ -876,9 +877,14 @@ export default function RegisterWizard() {
           <div className="flex items-center">
             {SECTIONS.map((s, i) => (
               <React.Fragment key={s.label}>
-                <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                <button
+                  type="button"
+                  disabled={!completed.has(i) && i !== activeSection}
+                  onClick={() => completed.has(i) ? handleEdit(i) : undefined}
+                  className={`flex flex-col items-center gap-1 flex-shrink-0 ${completed.has(i) ? 'cursor-pointer' : 'cursor-default'}`}
+                >
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
-                    completed.has(i) ? 'bg-green-500 border-green-500 text-white'
+                    completed.has(i) ? 'bg-green-500 border-green-500 text-white hover:bg-green-600'
                     : i === activeSection ? 'bg-[#25B3CC] border-[#25B3CC] text-white'
                     : 'bg-white border-gray-200 text-gray-400'
                   }`}>
@@ -891,7 +897,7 @@ export default function RegisterWizard() {
                   }`}>
                     {s.label}
                   </span>
-                </div>
+                </button>
                 {i < SECTIONS.length - 1 && (
                   <div className={`flex-1 h-px mx-1.5 transition-all duration-500 ${completed.has(i) ? 'bg-green-300' : 'bg-gray-100'}`} />
                 )}
