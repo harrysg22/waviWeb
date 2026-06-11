@@ -645,18 +645,25 @@ function Step6({ data, set, session }: { data: WizardData; set: (k: keyof Wizard
 }
 
 /* ─── Step 7 — Servicios extra ───────────────────────────────────────────────── */
-function Step7({ data, set, amenities }: {
-  data: WizardData; set: (k: keyof WizardData, v: any) => void; amenities: Amenity[]
+function Step7({ data, set, amenities, amenitiesLoaded }: {
+  data: WizardData; set: (k: keyof WizardData, v: any) => void
+  amenities: Amenity[]; amenitiesLoaded: boolean
 }) {
   const toggle = (id: number) => {
     const ids = data.amenity_ids
     set('amenity_ids', ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id])
   }
 
-  if (amenities.length === 0) return (
+  if (!amenitiesLoaded) return (
     <div className="flex items-center gap-2 text-gray-400 text-sm py-2">
       <Loader2 className="w-4 h-4 animate-spin" /> Cargando servicios...
     </div>
+  )
+
+  if (amenities.length === 0) return (
+    <p className="text-gray-400 text-sm py-2">
+      No hay servicios disponibles por ahora. Puedes continuar y enviar tu solicitud.
+    </p>
   )
 
   return (
@@ -691,10 +698,11 @@ export default function RegisterWizard() {
   const [sectionError,   setSectionError]   = useState<string | null>(null)
   const [submitting,     setSubmitting]     = useState(false)
 
-  const [categories,   setCategories]   = useState<Category[]>([])
-  const [zones,        setZones]        = useState<Zone[]>([])
-  const [cuisineTypes, setCuisineTypes] = useState<CuisineType[]>([])
-  const [amenities,    setAmenities]    = useState<Amenity[]>([])
+  const [categories,      setCategories]      = useState<Category[]>([])
+  const [zones,           setZones]           = useState<Zone[]>([])
+  const [cuisineTypes,    setCuisineTypes]    = useState<CuisineType[]>([])
+  const [amenities,       setAmenities]       = useState<Amenity[]>([])
+  const [amenitiesLoaded, setAmenitiesLoaded] = useState(false)
 
   /* ── Auth ── */
   useEffect(() => {
@@ -721,12 +729,14 @@ export default function RegisterWizard() {
       supabase.from('category').select('id, name').order('name'),
       supabase.from('zone').select('id, name').eq('city', 'Bogotá').order('name'),
       supabase.from('cuisine_type').select('id, name').order('name'),
-      supabase.from('additional_service').select('id, name, description').order('name'),
+      supabase.from('additional_services').select('id, name, description').order('name'),
     ]).then(([cats, zns, ct, am]) => {
       if (cats.data) setCategories(cats.data)
       if (zns.data)  setZones(zns.data)
       if (ct.data)   setCuisineTypes(ct.data)
-      if (am.data)   setAmenities(am.data)
+      if (am.error)  console.error('additional_service query error:', am.error)
+      setAmenities(am.data ?? [])
+      setAmenitiesLoaded(true)
     })
   }, [session])
 
@@ -878,7 +888,7 @@ export default function RegisterWizard() {
     3: <Step4 data={data} set={set} categories={categories} zones={zones} />,
     4: <Step5 data={data} set={set} session={session} />,
     5: <Step6 data={data} set={set} session={session} />,
-    6: <Step7 data={data} set={set} amenities={amenities} />,
+    6: <Step7 data={data} set={set} amenities={amenities} amenitiesLoaded={amenitiesLoaded} />,
   }
 
   return (
