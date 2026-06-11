@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router'
 import { supabase } from '@/lib/supabase'
 import {
   Loader2, ArrowLeft, Building2, MapPin, Clock, Phone,
-  CheckCircle2, XCircle, AlertCircle, Check,
+  CheckCircle2, XCircle, AlertCircle, Check, ImageIcon,
 } from 'lucide-react'
 
 const DAYS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -30,7 +30,7 @@ export default function RegistrationDetail() {
     Promise.all([
       supabase.from('business_registration').select('*, zone:zone_id(name)').eq('id', id!).single(),
       supabase.from('category').select('id, name'),
-      supabase.from('additional_service').select('id, name'),
+      supabase.from('additional_services').select('id, name'),
       supabase.from('cuisine_type').select('id, name'),
     ]).then(([regRes, catsRes, amenRes, ctRes]) => {
       if (regRes.data) {
@@ -152,6 +152,38 @@ export default function RegistrationDetail() {
               } />
             )}
           </Section>
+
+          {/* Images */}
+          {(reg.main_image_url || reg.logo_url) && (
+            <Section title="Imágenes" icon={<ImageIcon className="w-4 h-4" />}>
+              <div className="flex flex-col sm:flex-row gap-4">
+                {reg.main_image_url && (
+                  <div className="flex-1">
+                    <p className="text-gray-500 text-xs mb-2 uppercase tracking-wider">Imagen principal</p>
+                    <a href={reg.main_image_url} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={reg.main_image_url}
+                        alt="Imagen principal"
+                        className="w-full h-40 object-cover rounded-xl border border-white/8 hover:opacity-90 transition-opacity cursor-pointer"
+                      />
+                    </a>
+                  </div>
+                )}
+                {reg.logo_url && (
+                  <div className="sm:w-40">
+                    <p className="text-gray-500 text-xs mb-2 uppercase tracking-wider">Logo</p>
+                    <a href={reg.logo_url} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={reg.logo_url}
+                        alt="Logo"
+                        className="w-full h-40 object-contain rounded-xl border border-white/8 bg-white/5 hover:opacity-90 transition-opacity cursor-pointer"
+                      />
+                    </a>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
 
           {/* Location */}
           <Section title="Ubicación" icon={<MapPin className="w-4 h-4" />}>

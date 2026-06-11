@@ -4,11 +4,12 @@ import { supabase } from '@/lib/supabase'
 import { Loader2, Building2, ChevronRight, Clock } from 'lucide-react'
 
 interface Registration {
-  id:           number
+  id:            number
   business_name: string
   email:         string
   submitted_at:  string
   status:        'pending' | 'approved' | 'rejected'
+  logo_url:      string | null
 }
 
 type Tab = 'pending' | 'approved' | 'rejected'
@@ -40,7 +41,7 @@ export default function AdminDashboard() {
     setLoading(true)
     supabase
       .from('business_registration')
-      .select('id, business_name, email, submitted_at, status')
+      .select('id, business_name, email, submitted_at, status, logo_url')
       .eq('status', tab)
       .order('submitted_at', { ascending: false })
       .then(({ data }) => {
@@ -99,8 +100,10 @@ export default function AdminDashboard() {
                 to={`/admin/${reg.id}`}
                 className="flex items-center gap-4 bg-white/4 hover:bg-white/7 border border-white/8 hover:border-white/15 rounded-2xl px-5 py-4 transition-all group"
               >
-                <div className="w-10 h-10 rounded-xl bg-[#25B3CC]/15 border border-[#25B3CC]/20 flex items-center justify-center flex-shrink-0">
-                  <Building2 className="w-5 h-5 text-[#25B3CC]" />
+                <div className="w-10 h-10 rounded-xl bg-[#25B3CC]/15 border border-[#25B3CC]/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {reg.logo_url
+                    ? <img src={reg.logo_url} alt="" className="w-full h-full object-cover" />
+                    : <Building2 className="w-5 h-5 text-[#25B3CC]" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-white text-sm truncate">{reg.business_name}</div>
