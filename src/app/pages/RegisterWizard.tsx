@@ -694,6 +694,8 @@ export default function RegisterWizard() {
   const [existingStatus, setExistingStatus] = useState<string | null>(null)
   const [data,           setData]           = useState<WizardData>(INITIAL_DATA)
   const [activeSection,  setActiveSection]  = useState<number | null>(0)
+  const [userMenuOpen,   setUserMenuOpen]   = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
   const [completed,      setCompleted]      = useState<Set<number>>(new Set())
   const [sectionError,   setSectionError]   = useState<string | null>(null)
   const [submitting,     setSubmitting]     = useState(false)
@@ -739,6 +741,21 @@ export default function RegisterWizard() {
       setAmenitiesLoaded(true)
     })
   }, [session])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    setUserMenuOpen(false)
+  }
 
   const set = useCallback((key: keyof WizardData, val: any) => {
     setData(prev => ({ ...prev, [key]: val }))
@@ -906,7 +923,36 @@ export default function RegisterWizard() {
               </p>
             </div>
           </div>
-          <span className="text-white/80 text-xs font-medium">{completed.size}/{SECTIONS.length}</span>
+          {/* User menu */}
+          <div className="relative" ref={userMenuRef}>
+            <button
+              onClick={() => setUserMenuOpen(v => !v)}
+              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 flex items-center justify-center transition-all"
+              title={session?.user?.email}
+            >
+              <span className="text-white text-xs font-bold uppercase">
+                {session?.user?.email?.[0] ?? '?'}
+              </span>
+            </button>
+
+            {userMenuOpen && (
+              <div className="absolute right-0 top-10 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-0.5">Sesión iniciada como</p>
+                  <p className="text-gray-800 text-sm font-medium truncate">{session?.user?.email}</p>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-red-500 hover:bg-red-50 text-sm font-medium transition-colors text-left"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+                  </svg>
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="h-1 bg-white/20">
           <div className="h-full bg-white transition-all duration-500" style={{ width: `${progressPct}%` }} />
