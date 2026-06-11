@@ -533,7 +533,8 @@ function Step5({ data, set, session }: { data: WizardData; set: (k: keyof Wizard
       const url = await uploadImage(file, session.user.id, 'main')
       set('main_image_url', url)
     } catch (err: any) {
-      setError('Error al subir la imagen. Intenta de nuevo.')
+      console.error('upload error (main):', err)
+      setError(err?.message ?? 'Error al subir la imagen. Intenta de nuevo.')
     }
     setUploading(false)
   }
@@ -592,7 +593,8 @@ function Step6({ data, set, session }: { data: WizardData; set: (k: keyof Wizard
       const url = await uploadImage(file, session.user.id, 'logo')
       set('logo_url', url)
     } catch (err: any) {
-      setError('Error al subir el logo. Intenta de nuevo.')
+      console.error('upload error (logo):', err)
+      setError(err?.message ?? 'Error al subir el logo. Intenta de nuevo.')
     }
     setUploading(false)
   }
