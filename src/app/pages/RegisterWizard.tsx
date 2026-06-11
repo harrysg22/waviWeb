@@ -278,9 +278,10 @@ function Step1({ data, set, categories, cuisineTypes }: {
           value={data.business_name} onChange={e => set('business_name', e.target.value)} maxLength={100} />
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
           Categorías <span className="text-[#25B3CC]">*</span>
         </label>
+        <p className="text-gray-400 text-xs mb-2">Elige todas las categorías que apliquen a tu negocio.</p>
         {categories.length === 0
           ? <div className="flex items-center gap-2 text-gray-400 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Cargando...</div>
           : <div className="flex flex-wrap gap-2">
@@ -297,7 +298,10 @@ function Step1({ data, set, categories, cuisineTypes }: {
       </div>
       {cuisineTypes.length > 0 && (
         <div>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tipo de cocina</label>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            Restaurante <span className="normal-case font-normal text-gray-400">(tipo de cocina)</span>
+          </label>
+          <p className="text-gray-400 text-xs mb-2">Si tu negocio es un restaurante, selecciona el tipo de cocina que ofrece. Si no aplica, deja esto vacío.</p>
           <div className="flex flex-wrap gap-2">
             {cuisineTypes.map(ct => (
               <button key={ct.id} type="button" onClick={() => toggle('cuisine_type_ids', ct.id)}
