@@ -50,8 +50,8 @@ export const Navbar = () => {
 
         {/* CTAs */}
         <div className="hidden lg:flex items-center gap-3">
-          <Link 
-            to="/#wavi-business" 
+          <Link
+            to="/register"
             className="flex items-center gap-2 text-sm font-semibold text-wavi-blue border border-wavi-blue/30 hover:border-wavi-blue hover:bg-wavi-blue/5 px-4 py-2 rounded-full transition-all"
           >
             <span className="w-2 h-2 rounded-full bg-wavi-blue inline-block"></span>
@@ -91,13 +91,13 @@ export const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
-              <Link 
-                to="/#wavi-business" 
+              <Link
+                to="/register"
                 className="flex items-center gap-2 text-base font-bold text-wavi-blue py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <span className="w-2 h-2 rounded-full bg-wavi-blue inline-block"></span>
-                Descargar WAVI Business
+                WAVI Business
               </Link>
             </div>
           </motion.div>

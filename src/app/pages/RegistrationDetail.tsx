@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router'
 import { supabase } from '@/lib/supabase'
 import {
   Loader2, ArrowLeft, Building2, MapPin, Clock, Phone,
-  CheckCircle2, XCircle, AlertCircle, Check, ImageIcon,
+  CheckCircle2, XCircle, AlertCircle, Check, ImageIcon, Sparkles,
 } from 'lucide-react'
 
 const DAYS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -154,34 +154,48 @@ export default function RegistrationDetail() {
           </Section>
 
           {/* Images */}
-          {(reg.main_image_url || reg.logo_url) && (
+          {((reg.image_urls?.length > 0) || reg.main_image_url || reg.logo_url) && (
             <Section title="Imágenes" icon={<ImageIcon className="w-4 h-4" />}>
-              <div className="flex flex-col sm:flex-row gap-4">
-                {reg.main_image_url && (
-                  <div className="flex-1">
-                    <p className="text-gray-500 text-xs mb-2 uppercase tracking-wider">Imagen principal</p>
-                    <a href={reg.main_image_url} target="_blank" rel="noopener noreferrer">
-                      <img
-                        src={reg.main_image_url}
-                        alt="Imagen principal"
-                        className="w-full h-40 object-cover rounded-xl border border-white/8 hover:opacity-90 transition-opacity cursor-pointer"
-                      />
-                    </a>
+              {/* Gallery grid */}
+              {(() => {
+                const imgs: string[] = reg.image_urls?.length > 0
+                  ? reg.image_urls
+                  : reg.main_image_url ? [reg.main_image_url] : []
+                return imgs.length > 0 ? (
+                  <div>
+                    <p className="text-gray-500 text-xs mb-2 uppercase tracking-wider">Galería</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {imgs.map((url: string, idx: number) => (
+                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="relative">
+                          <img
+                            src={url}
+                            alt={`Imagen ${idx + 1}`}
+                            className="w-full h-28 object-cover rounded-xl border border-white/8 hover:opacity-90 transition-opacity cursor-pointer"
+                          />
+                          {idx === 0 && (
+                            <span className="absolute top-1.5 left-1.5 bg-[#25B3CC] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                              Principal
+                            </span>
+                          )}
+                        </a>
+                      ))}
+                    </div>
                   </div>
-                )}
-                {reg.logo_url && (
-                  <div className="sm:w-40">
-                    <p className="text-gray-500 text-xs mb-2 uppercase tracking-wider">Logo</p>
-                    <a href={reg.logo_url} target="_blank" rel="noopener noreferrer">
-                      <img
-                        src={reg.logo_url}
-                        alt="Logo"
-                        className="w-full h-40 object-contain rounded-xl border border-white/8 bg-white/5 hover:opacity-90 transition-opacity cursor-pointer"
-                      />
-                    </a>
-                  </div>
-                )}
-              </div>
+                ) : null
+              })()}
+              {/* Logo */}
+              {reg.logo_url && (
+                <div className="mt-3">
+                  <p className="text-gray-500 text-xs mb-2 uppercase tracking-wider">Logo</p>
+                  <a href={reg.logo_url} target="_blank" rel="noopener noreferrer" className="inline-block">
+                    <img
+                      src={reg.logo_url}
+                      alt="Logo"
+                      className="h-24 w-auto object-contain rounded-xl border border-white/8 bg-white/5 hover:opacity-90 transition-opacity cursor-pointer"
+                    />
+                  </a>
+                </div>
+              )}
             </Section>
           )}
 
@@ -218,7 +232,7 @@ export default function RegistrationDetail() {
 
           {/* Amenities */}
           {reg.amenity_ids?.length > 0 && (
-            <Section title="Comodidades" icon={<Check className="w-4 h-4" />}>
+            <Section title="Servicios extra" icon={<Check className="w-4 h-4" />}>
               <div className="flex flex-wrap gap-2">
                 {reg.amenity_ids.map((i: number) => amenities[i] && (
                   <span key={i} className="px-3 py-1 rounded-full bg-white/6 border border-white/10 text-gray-300 text-xs">
@@ -239,6 +253,33 @@ export default function RegistrationDetail() {
               <p className="text-gray-600 text-sm">No especificados</p>
             )}
           </Section>
+
+          {/* Promotions */}
+          {reg.events?.length > 0 && (
+            <Section title="Promociones" icon={<Sparkles className="w-4 h-4" />}>
+              <div className="space-y-4">
+                {reg.events.map((ev: any, idx: number) => (
+                  <div key={idx} className="flex gap-4 items-start">
+                    {ev.image_urls?.[0] && (
+                      <a href={ev.image_urls[0]} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                        <img
+                          src={ev.image_urls[0]}
+                          alt={ev.titulo}
+                          className="w-20 h-20 object-cover rounded-xl border border-white/8 hover:opacity-90 transition-opacity cursor-pointer"
+                        />
+                      </a>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-semibold">{ev.titulo || '—'}</p>
+                      {ev.descripcion && (
+                        <p className="text-gray-400 text-xs mt-1 leading-relaxed line-clamp-3">{ev.descripcion}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
 
           {/* Submitter */}
           <Section title="Solicitante" icon={<Building2 className="w-4 h-4" />}>

@@ -29,6 +29,18 @@ interface ServiceEntry {
   image_urls:  string[]
 }
 
+interface EventEntry {
+  id:           string
+  titulo:       string
+  fecha_inicio: string  // YYYY-MM-DD
+  fecha_fin:    string  // YYYY-MM-DD
+  duracion:     string
+  hora:         string  // ej. "9:00 PM"
+  precio:       string
+  descripcion:  string
+  image_urls:   string[]
+}
+
 interface WizardData {
   business_name:    string
   category_ids:     number[]
@@ -48,6 +60,7 @@ interface WizardData {
   image_urls:       string[]
   logo_url:         string
   services:         ServiceEntry[]
+  events:           EventEntry[]
 }
 
 const INITIAL_HOURS: HourEntry[] = [
@@ -65,7 +78,7 @@ const INITIAL_DATA: WizardData = {
   description: '', mean_price: '', address: '', zone_id: null,
   location_lat: null, location_lng: null, business_hours: INITIAL_HOURS,
   amenity_ids: [], phone: '', whatsapp: '', website: '', instagram: '',
-  image_urls: [], logo_url: '', services: [],
+  image_urls: [], logo_url: '', services: [], events: [],
 }
 
 function generateTimeOptions(): string[] {
@@ -96,9 +109,10 @@ const SECTIONS = [
   { label: 'IMÁGENES',  title: 'Imágenes' },
   { label: 'LOGO',      title: 'Logo' },
   { label: 'SERVICIOS', title: 'Servicios extra' },
+  { label: 'PROMOS',    title: 'Promociones' },
 ]
 const PART1_INDICES = [0, 1, 2, 3]
-const PART2_INDICES = [4, 5, 6]
+const PART2_INDICES = [4, 5, 6, 7]
 
 /* ─── Image upload helper ────────────────────────────────────────────────────── */
 async function uploadImage(file: File, userId: string, type: 'main' | 'logo'): Promise<string> {
@@ -360,31 +374,42 @@ function Step2({ data, set, zones }: {
   const mapRef         = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markerRef      = useRef<any>(null)
-  const [mapsReady, setMapsReady] = useState(false)
+  const [mapsReady,  setMapsReady]  = useState(false)
+  const [mapsError,  setMapsError]  = useState(false)
   const hasKey = !!import.meta.env.VITE_GOOGLE_MAPS_KEY
 
   useEffect(() => {
     if (!hasKey) return
+    // Global auth failure callback — called by Google when key is invalid
+    ;(window as any).gm_authFailure = () => setMapsError(true)
+
     if ((window as any).google?.maps) { setMapsReady(true); return }
     const existing = document.querySelector('script[src*="maps.googleapis.com"]')
-    if (existing) { existing.addEventListener('load', () => setMapsReady(true)); return }
+    if (existing) {
+      existing.addEventListener('load', () => setMapsReady(true))
+      existing.addEventListener('error', () => setMapsError(true))
+      return
+    }
     const script = document.createElement('script')
     script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}&libraries=places`
-    script.async = true; script.onload = () => setMapsReady(true)
+    script.async = true
+    script.onload  = () => setMapsReady(true)
+    script.onerror = () => setMapsError(true)
     document.head.appendChild(script)
+    return () => { delete (window as any).gm_authFailure }
   }, [hasKey])
 
   useEffect(() => {
-    if (!mapsReady || !mapRef.current || mapInstanceRef.current) return
+    if (!mapsReady || mapsError || !mapRef.current || mapInstanceRef.current) return
     const center = { lat: data.location_lat ?? 4.711, lng: data.location_lng ?? -74.0721 }
     const map = new google.maps.Map(mapRef.current, { center, zoom: data.location_lat ? 16 : 12, disableDefaultUI: true, zoomControl: true })
     const marker = new google.maps.Marker({ position: center, map, draggable: true, visible: !!data.location_lat })
     marker.addListener('dragend', (e: any) => { set('location_lat', e.latLng.lat()); set('location_lng', e.latLng.lng()) })
     mapInstanceRef.current = map; markerRef.current = marker
-  }, [mapsReady])
+  }, [mapsReady, mapsError])
 
   useEffect(() => {
-    if (!mapsReady || !addressRef.current) return
+    if (!mapsReady || mapsError || !addressRef.current) return
     const ac = new google.maps.places.Autocomplete(addressRef.current, {
       componentRestrictions: { country: 'co' }, fields: ['geometry', 'formatted_address'],
     })
@@ -398,7 +423,9 @@ function Step2({ data, set, zones }: {
         markerRef.current.setPosition({ lat, lng }); markerRef.current.setVisible(true)
       }
     })
-  }, [mapsReady])
+  }, [mapsReady, mapsError])
+
+  const showMap = hasKey && !mapsError
 
   return (
     <div className="space-y-4">
@@ -409,14 +436,36 @@ function Step2({ data, set, zones }: {
         <div className="relative">
           <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input ref={addressRef} className={`${inputCls} pl-10`}
-            placeholder={hasKey ? 'Busca la dirección de tu negocio' : 'Ingresa la dirección completa'}
+            placeholder="Ingresa la dirección completa de tu negocio"
             value={data.address} onChange={e => set('address', e.target.value)} />
         </div>
+        {mapsError && (
+          <p className="text-amber-600 text-xs mt-1.5 flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            El autocompletado no está disponible. Puedes escribir la dirección manualmente.
+          </p>
+        )}
       </div>
-      <div ref={mapRef} className="w-full h-44 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center">
-        {!hasKey && <div className="flex items-center gap-2 text-gray-400 text-sm"><MapPin className="w-4 h-4" /> Mapa disponible con Google Maps API Key</div>}
-      </div>
-      {data.location_lat && <p className="text-gray-500 text-xs flex items-center gap-1.5"><Check className="w-3 h-3 text-[#25B3CC]" /> Puedes arrastrar el pin para afinar la posición.</p>}
+
+      {/* Map — hidden when error to avoid Google's error overlay */}
+      <div
+        ref={mapRef}
+        className={`w-full h-44 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center ${!showMap ? 'hidden' : ''}`}
+      />
+      {!hasKey && (
+        <div className="w-full h-44 rounded-xl border border-gray-100 bg-gray-50 flex items-center justify-center">
+          <div className="flex items-center gap-2 text-gray-400 text-sm">
+            <MapPin className="w-4 h-4" /> Mapa no disponible
+          </div>
+        </div>
+      )}
+
+      {data.location_lat && !mapsError && (
+        <p className="text-gray-500 text-xs flex items-center gap-1.5">
+          <Check className="w-3 h-3 text-[#25B3CC]" /> Puedes arrastrar el pin para afinar la posición.
+        </p>
+      )}
+
       <div>
         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
           Zona de Bogotá <span className="text-[#25B3CC]">*</span>
@@ -788,10 +837,12 @@ function Step7({ data, set, amenities, amenitiesLoaded }: {
 }
 
 /* ─── Review Screen ──────────────────────────────────────────────────────────── */
-const OTHER_OPTIONAL_CARDS = [
-  { label: 'Eventos',     Icon: CalendarDays, from: '#3B2A6E', to: '#7C5CBF' },
-  { label: 'Promociones', Icon: Tag,          from: '#6B4500', to: '#D4920A' },
-]
+const PROMO_CARD = { label: 'Promociones', Icon: Tag, from: '#6B4500', to: '#D4920A' }
+
+const BLANK_EVENT = (): EventEntry => ({
+  id: Date.now().toString(), titulo: '', fecha_inicio: '', fecha_fin: '',
+  duracion: '2 horas', hora: '8:00 PM', precio: '', descripcion: '', image_urls: [],
+})
 
 const CHARGE_TYPES = [
   { value: 'gratis'      as const, label: 'Gratis',       sub: 'Sin costo',         Icon: Heart  },
@@ -816,6 +867,7 @@ function ReviewScreen({
   getSummary, onEdit, onBack, onSubmit,
   submitting, error, bannerDismissed, onDismissBanner, session,
   services, onServicesChange,
+  events, onEventsChange,
 }: {
   getSummary:       (idx: number) => string
   onEdit:           (idx: number) => void
@@ -828,7 +880,10 @@ function ReviewScreen({
   session:          any
   services:         ServiceEntry[]
   onServicesChange: (s: ServiceEntry[]) => void
+  events:           EventEntry[]
+  onEventsChange:   (e: EventEntry[]) => void
 }) {
+  /* ── Services state ── */
   const [servicesOpen,  setServicesOpen]  = useState(false)
   const [draft,         setDraft]         = useState<ServiceEntry | null>(null)
   const [editingId,     setEditingId]     = useState<string | null>(null)
@@ -839,28 +894,16 @@ function ReviewScreen({
     setDraft(prev => prev ? { ...prev, [k]: v } : prev)
     setServiceError(null)
   }
-
-  const openAdd = () => {
-    setEditingId(null); setDraft(BLANK_SERVICE()); setServiceError(null)
-  }
-
-  const openEdit = (svc: ServiceEntry) => {
-    setEditingId(svc.id); setDraft({ ...svc }); setServiceError(null)
-  }
-
+  const openAdd = () => { setEditingId(null); setDraft(BLANK_SERVICE()); setServiceError(null) }
+  const openEdit = (svc: ServiceEntry) => { setEditingId(svc.id); setDraft({ ...svc }); setServiceError(null) }
   const cancelForm = () => { setDraft(null); setEditingId(null); setServiceError(null) }
-
   const saveService = () => {
     if (!draft) return
     if (!draft.name.trim()) { setServiceError('El nombre del servicio es obligatorio.'); return }
-    if (editingId) {
-      onServicesChange(services.map(s => s.id === editingId ? draft : s))
-    } else {
-      onServicesChange([...services, draft])
-    }
+    if (editingId) onServicesChange(services.map(s => s.id === editingId ? draft : s))
+    else onServicesChange([...services, draft])
     setDraft(null); setEditingId(null); setServiceError(null)
   }
-
   const deleteService = (id: string) => onServicesChange(services.filter(s => s.id !== id))
 
   const handleUploadImage = async (file: File, slot: number) => {
@@ -875,23 +918,65 @@ function ReviewScreen({
       const { data: ud } = supabase.storage.from('business-registrations').getPublicUrl(path)
       setDraft(prev => {
         if (!prev) return prev
-        const urls = [...prev.image_urls]
-        urls[slot] = ud.publicUrl
+        const urls = [...prev.image_urls]; urls[slot] = ud.publicUrl
         return { ...prev, image_urls: urls }
       })
-    } catch (err: any) {
-      setServiceError(err?.message ?? 'Error al subir la imagen.')
-    }
+    } catch (err: any) { setServiceError(err?.message ?? 'Error al subir la imagen.') }
     setUploadingSlot(null)
   }
-
   const removeImage = (slot: number) => {
-    if (!draft) return
-    setDraft(prev => {
-      if (!prev) return prev
-      const urls = prev.image_urls.filter((_, i) => i !== slot)
-      return { ...prev, image_urls: urls }
-    })
+    setDraft(prev => prev ? { ...prev, image_urls: prev.image_urls.filter((_, i) => i !== slot) } : prev)
+  }
+
+  /* ── Events state ── */
+  const [eventsOpen,      setEventsOpen]      = useState(false)
+  const [draftEvt,        setDraftEvt]        = useState<EventEntry | null>(null)
+  const [editingEvtId,    setEditingEvtId]    = useState<string | null>(null)
+  const [uploadingEvtSlot,setUploadingEvtSlot]= useState<number | null>(null)
+  const [eventError,      setEventError]      = useState<string | null>(null)
+
+  const setEvtField = (k: keyof EventEntry, v: any) => {
+    setDraftEvt(prev => prev ? { ...prev, [k]: v } : prev)
+    setEventError(null)
+  }
+  const openAddEvt = () => { setEditingEvtId(null); setDraftEvt(BLANK_EVENT()); setEventError(null) }
+  const openEditEvt = (evt: EventEntry) => { setEditingEvtId(evt.id); setDraftEvt({ ...evt }); setEventError(null) }
+  const cancelEvtForm = () => { setDraftEvt(null); setEditingEvtId(null); setEventError(null) }
+  const saveEvent = () => {
+    if (!draftEvt) return
+    if (!draftEvt.titulo.trim()) { setEventError('El título del evento es obligatorio.'); return }
+    if (!draftEvt.fecha_inicio)  { setEventError('La fecha de inicio es obligatoria.'); return }
+    if (editingEvtId) onEventsChange(events.map(e => e.id === editingEvtId ? draftEvt : e))
+    else onEventsChange([...events, draftEvt])
+    setDraftEvt(null); setEditingEvtId(null); setEventError(null)
+  }
+  const deleteEvent = (id: string) => onEventsChange(events.filter(e => e.id !== id))
+
+  const handleUploadEvtImage = async (file: File, slot: number) => {
+    if (!draftEvt) return
+    setUploadingEvtSlot(slot); setEventError(null)
+    try {
+      const ext  = file.name.split('.').pop() ?? 'jpg'
+      const path = `${session.user.id}/evt-${Date.now()}-${slot}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('business-registrations').upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      const { data: ud } = supabase.storage.from('business-registrations').getPublicUrl(path)
+      setDraftEvt(prev => {
+        if (!prev) return prev
+        const urls = [...prev.image_urls]; urls[slot] = ud.publicUrl
+        return { ...prev, image_urls: urls }
+      })
+    } catch (err: any) { setEventError(err?.message ?? 'Error al subir la imagen.') }
+    setUploadingEvtSlot(null)
+  }
+  const removeEvtImage = (slot: number) => {
+    setDraftEvt(prev => prev ? { ...prev, image_urls: prev.image_urls.filter((_, i) => i !== slot) } : prev)
+  }
+
+  const fmtDate = (d: string) => {
+    if (!d) return ''
+    return new Date(d + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
   }
 
   return (
@@ -1200,21 +1285,255 @@ function ReviewScreen({
             </button>
           )}
 
-          {/* Eventos & Promociones cards */}
-          {OTHER_OPTIONAL_CARDS.map(({ label, Icon, from, to }) => (
-            <button key={label} type="button"
+          {/* ── Eventos — card or expanded panel ── */}
+          {eventsOpen ? (
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              {/* Panel header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2.5">
+                  <CalendarDays className="w-4 h-4 text-[#7C5CBF]" />
+                  <span className="font-bold text-gray-900 text-sm">Eventos</span>
+                  {events.length > 0 && (
+                    <span className="text-xs font-semibold text-[#7C5CBF] bg-[#7C5CBF]/10 px-2 py-0.5 rounded-full">
+                      {events.length} agregado{events.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => { setEventsOpen(false); cancelEvtForm() }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {draftEvt ? (
+                /* ── Event form ── */
+                <div className="px-5 py-5 space-y-5">
+                  <p className="font-semibold text-gray-900 text-sm">{editingEvtId ? 'Editar evento' : 'Nuevo evento'}</p>
+
+                  {/* Título */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Título del evento <span className="text-[#25B3CC]">*</span>
+                    </label>
+                    <input className={inputCls} placeholder="Ej. Noche de karaoke"
+                      value={draftEvt.titulo} onChange={e => setEvtField('titulo', e.target.value)} maxLength={100} />
+                  </div>
+
+                  {/* Fechas */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                        Fecha inicio <span className="text-[#25B3CC]">*</span>
+                      </label>
+                      <input className={inputCls} type="date"
+                        value={draftEvt.fecha_inicio} onChange={e => setEvtField('fecha_inicio', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                        Fecha fin
+                      </label>
+                      <input className={inputCls} type="date"
+                        min={draftEvt.fecha_inicio || undefined}
+                        value={draftEvt.fecha_fin} onChange={e => setEvtField('fecha_fin', e.target.value)} />
+                    </div>
+                  </div>
+
+                  {/* Hora y Duración */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                        Hora de inicio
+                      </label>
+                      <div className="relative">
+                        <select className={selectCls} value={draftEvt.hora}
+                          onChange={e => setEvtField('hora', e.target.value)}>
+                          {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                        Duración
+                      </label>
+                      <div className="relative">
+                        <select className={selectCls} value={draftEvt.duracion}
+                          onChange={e => setEvtField('duracion', e.target.value)}>
+                          {DURATION_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Precio */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Precio del boleto (COP)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                      <input className={`${inputCls} pl-7`} type="number" placeholder="0 = Gratis"
+                        value={draftEvt.precio} onChange={e => setEvtField('precio', e.target.value)} min="0" />
+                    </div>
+                  </div>
+
+                  {/* Descripción */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Descripción
+                    </label>
+                    <textarea className={`${inputCls} resize-none`} rows={3}
+                      placeholder="Describe el evento..."
+                      value={draftEvt.descripcion} onChange={e => setEvtField('descripcion', e.target.value)} maxLength={300} />
+                    <div className="text-right text-gray-400 text-[11px] mt-1">{draftEvt.descripcion.length}/300</div>
+                  </div>
+
+                  {/* Imágenes */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      Imágenes <span className="normal-case font-normal text-gray-400">(máx. 3)</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[0, 1, 2].map(slot => {
+                        const url = draftEvt.image_urls[slot]
+                        return url ? (
+                          <div key={slot} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <button type="button" onClick={() => removeEvtImage(slot)}
+                                className="bg-red-500/90 text-white text-[10px] font-medium px-3 py-1.5 rounded-lg">
+                                Eliminar
+                              </button>
+                            </div>
+                            {uploadingEvtSlot === slot && (
+                              <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                                <Loader2 className="w-5 h-5 text-[#25B3CC] animate-spin" />
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <label key={slot}
+                            className="aspect-square rounded-xl border-2 border-dashed border-gray-200 hover:border-[#7C5CBF]/50 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all bg-gray-50 hover:bg-[#7C5CBF]/5">
+                            {uploadingEvtSlot === slot
+                              ? <Loader2 className="w-5 h-5 text-[#7C5CBF] animate-spin" />
+                              : <><Upload className="w-4 h-4 text-gray-400" /><span className="text-[10px] text-gray-400">Agregar</span></>
+                            }
+                            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                              onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadEvtImage(f, slot); e.target.value = '' }} />
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Nota de ubicación */}
+                  <div className="flex items-start gap-2.5 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                    <MapPin className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+                    <p className="text-gray-500 text-xs leading-relaxed">
+                      El lugar del evento será la dirección de tu establecimiento. Por temas de seguridad, actualmente solo se permiten eventos en este lugar.
+                    </p>
+                  </div>
+
+                  {eventError && (
+                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                      <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                      <p className="text-red-600 text-sm">{eventError}</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-1">
+                    <button onClick={saveEvent}
+                      className="flex-1 bg-[#7C5CBF] hover:bg-[#6A4DAD] text-white font-semibold py-3 rounded-xl text-sm transition-all">
+                      {editingEvtId ? 'Guardar cambios' : 'Guardar evento'}
+                    </button>
+                    <button onClick={cancelEvtForm}
+                      className="px-5 text-gray-500 hover:text-gray-700 font-medium text-sm transition-colors">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ── Events list ── */
+                <div className="px-5 py-4 space-y-3">
+                  {events.length === 0 && (
+                    <p className="text-gray-400 text-sm text-center py-4">Aún no has agregado eventos.</p>
+                  )}
+                  {events.map(evt => (
+                    <div key={evt.id} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3">
+                      {evt.image_urls[0] ? (
+                        <img src={evt.image_urls[0]} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-[#7C5CBF]/10 flex items-center justify-center flex-shrink-0">
+                          <CalendarDays className="w-5 h-5 text-[#7C5CBF]" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm">{evt.titulo}</p>
+                        <p className="text-gray-500 text-xs mt-0.5">
+                          {fmtDate(evt.fecha_inicio)}{evt.fecha_fin && evt.fecha_fin !== evt.fecha_inicio ? ` → ${fmtDate(evt.fecha_fin)}` : ''}
+                          {evt.hora ? ` · ${evt.hora}` : ''}
+                        </p>
+                        <p className="text-gray-400 text-xs mt-0.5">
+                          {evt.precio && Number(evt.precio) > 0 ? `$${Number(evt.precio).toLocaleString('es-CO')}` : 'Gratis'}
+                          {evt.duracion ? ` · ${evt.duracion}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button onClick={() => openEditEvt(evt)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-[#7C5CBF] hover:bg-[#7C5CBF]/8 transition-all">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => deleteEvent(evt.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={openAddEvt}
+                    className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#7C5CBF]/40 hover:border-[#7C5CBF] text-[#7C5CBF] font-semibold py-3 rounded-xl text-sm transition-all hover:bg-[#7C5CBF]/5">
+                    <Plus className="w-4 h-4" /> Agregar evento
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ── Eventos card ── */
+            <button type="button" onClick={() => setEventsOpen(true)}
               className="w-full relative overflow-hidden rounded-2xl h-24 flex items-end p-4 text-left">
-              <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${from}, ${to})` }} />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #3B2A6E, #7C5CBF)' }} />
               <div className="absolute inset-0 flex items-center justify-end pr-6 opacity-20">
-                <Icon className="w-20 h-20 text-white" />
+                <CalendarDays className="w-20 h-20 text-white" />
               </div>
-              <span className="relative text-white font-bold text-lg drop-shadow">{label}</span>
-              <div className="absolute bottom-3 right-3 bg-white rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm">
-                <Info className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-gray-700 text-xs font-semibold">0/1</span>
-              </div>
+              <span className="relative text-white font-bold text-lg drop-shadow">Eventos</span>
+              {events.length > 0 ? (
+                <div className="absolute bottom-3 right-3 bg-green-500 rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm">
+                  <Check className="w-3 h-3 text-white" />
+                  <span className="text-white text-xs font-semibold">{events.length}</span>
+                </div>
+              ) : (
+                <div className="absolute bottom-3 right-3 bg-white rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm">
+                  <Info className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="text-gray-700 text-xs font-semibold">0/1</span>
+                </div>
+              )}
             </button>
-          ))}
+          )}
+
+          {/* Promociones card */}
+          <button type="button"
+            className="w-full relative overflow-hidden rounded-2xl h-24 flex items-end p-4 text-left">
+            <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${PROMO_CARD.from}, ${PROMO_CARD.to})` }} />
+            <div className="absolute inset-0 flex items-center justify-end pr-6 opacity-20">
+              <PROMO_CARD.Icon className="w-20 h-20 text-white" />
+            </div>
+            <span className="relative text-white font-bold text-lg drop-shadow">{PROMO_CARD.label}</span>
+            <div className="absolute bottom-3 right-3 bg-white rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm">
+              <Info className="w-3.5 h-3.5 text-amber-500" />
+              <span className="text-gray-700 text-xs font-semibold">0/1</span>
+            </div>
+          </button>
         </div>
 
         {/* Submit */}
@@ -1238,6 +1557,162 @@ function ReviewScreen({
         </div>
 
       </div>
+    </div>
+  )
+}
+
+/* ─── Step 8 — Promociones ───────────────────────────────────────────────────── */
+const MAX_PROMOS = 3
+
+function Step8({ data, set, session }: { data: WizardData; set: (k: keyof WizardData, v: any) => void; session: any }) {
+  const [form,       setForm]       = useState({ titulo: '', descripcion: '', image_url: '' })
+  const [uploading,  setUploading]  = useState(false)
+  const [uploadErr,  setUploadErr]  = useState<string | null>(null)
+  const [showForm,   setShowForm]   = useState(data.events.length === 0)
+
+  const events = data.events
+
+  const handleFlyer = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setUploading(true); setUploadErr(null)
+    try {
+      const ext  = file.name.split('.').pop() ?? 'jpg'
+      const path = `${session.user.id}/promo-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('business-registrations')
+        .upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      const { data: urlData } = supabase.storage.from('business-registrations').getPublicUrl(path)
+      setForm(f => ({ ...f, image_url: urlData.publicUrl }))
+    } catch (err: any) {
+      setUploadErr(err?.message ?? 'Error al subir el flyer.')
+    }
+    setUploading(false)
+  }
+
+  const addPromo = () => {
+    if (!form.titulo.trim()) return
+    const newEvent: EventEntry = {
+      id:           crypto.randomUUID(),
+      titulo:       form.titulo.trim(),
+      descripcion:  form.descripcion.trim(),
+      image_urls:   form.image_url ? [form.image_url] : [],
+      fecha_inicio: '', fecha_fin: '', duracion: '', hora: '', precio: '',
+    }
+    set('events', [...events, newEvent])
+    setForm({ titulo: '', descripcion: '', image_url: '' })
+    setShowForm(false)
+  }
+
+  const removePromo = (id: string) => {
+    set('events', events.filter((e: EventEntry) => e.id !== id))
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-2.5 bg-[#25B3CC]/8 border border-[#25B3CC]/20 rounded-xl px-4 py-3">
+        <AlertCircle className="w-4 h-4 text-[#25B3CC] shrink-0 mt-0.5" />
+        <p className="text-gray-600 text-sm leading-relaxed">
+          Esta sección es <span className="font-semibold text-gray-800">opcional</span>. Puedes agregar hasta {MAX_PROMOS} promociones o eventos activos de tu negocio.
+        </p>
+      </div>
+
+      {/* Lista de promos agregadas */}
+      {events.length > 0 && (
+        <div className="space-y-2">
+          {events.map((ev: EventEntry) => (
+            <div key={ev.id} className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3">
+              {ev.image_urls[0] ? (
+                <img src={ev.image_urls[0]} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-200" />
+              ) : (
+                <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <ImageIcon className="w-6 h-6 text-gray-300" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-800 text-sm font-semibold truncate">{ev.titulo}</p>
+                {ev.descripcion && <p className="text-gray-400 text-xs truncate mt-0.5">{ev.descripcion}</p>}
+              </div>
+              <button type="button" onClick={() => removePromo(ev.id)}
+                className="text-red-400 hover:text-red-500 text-xs font-medium flex-shrink-0 transition-colors">
+                Eliminar
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Botón agregar */}
+      {!showForm && events.length < MAX_PROMOS && (
+        <button type="button" onClick={() => setShowForm(true)}
+          className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-[#25B3CC]/40 text-gray-400 hover:text-[#25B3CC] rounded-xl py-3 text-sm font-medium transition-all">
+          <span className="text-lg leading-none">+</span> Agregar promoción
+        </button>
+      )}
+
+      {/* Mini-formulario inline */}
+      {showForm && (
+        <div className="border border-[#25B3CC]/30 rounded-2xl p-4 space-y-3 bg-[#25B3CC]/3">
+          <p className="text-gray-700 text-sm font-semibold">Nueva promoción</p>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              Título <span className="text-[#25B3CC]">*</span>
+            </label>
+            <input className={inputCls} placeholder="Ej. 2x1 en tragos · Happy Hour · Brunch de fin de semana"
+              value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} maxLength={80} />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Descripción</label>
+            <textarea className={`${inputCls} resize-none`} rows={3}
+              placeholder="Describe los detalles de la promoción..."
+              value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))} maxLength={300} />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Imagen / Flyer</label>
+            <label className={`flex items-center gap-3 cursor-pointer rounded-xl border transition-all px-4 py-3 ${
+              form.image_url ? 'border-[#25B3CC]/40 bg-[#25B3CC]/5' : 'border-gray-200 hover:border-gray-300 bg-white'
+            }`}>
+              {uploading ? (
+                <Loader2 className="w-5 h-5 text-[#25B3CC] animate-spin flex-shrink-0" />
+              ) : form.image_url ? (
+                <img src={form.image_url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200" />
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <Upload className="w-4 h-4 text-gray-400" />
+                </div>
+              )}
+              <div className="flex-1">
+                <p className="text-gray-700 text-sm font-medium">
+                  {form.image_url ? 'Flyer subido ✓' : 'Subir imagen / flyer'}
+                </p>
+                <p className="text-gray-400 text-xs">JPG, PNG o WebP · Opcional</p>
+              </div>
+              {form.image_url && (
+                <button type="button" onClick={e => { e.preventDefault(); setForm(f => ({ ...f, image_url: '' })) }}
+                  className="text-gray-400 hover:text-red-400 text-xs transition-colors">Quitar</button>
+              )}
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFlyer} className="hidden" />
+            </label>
+            {uploadErr && <p className="text-red-500 text-xs mt-1">{uploadErr}</p>}
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={addPromo} disabled={!form.titulo.trim()}
+              className="flex-1 bg-[#25B3CC] hover:bg-[#1E9DB5] disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-all">
+              Guardar promoción
+            </button>
+            <button type="button" onClick={() => { setShowForm(false); setForm({ titulo: '', descripcion: '', image_url: '' }) }}
+              className="px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2.5 rounded-xl text-sm transition-all">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1355,6 +1830,7 @@ export default function RegisterWizard() {
     if (idx === 4) { const n = data.image_urls.length; return n > 0 ? `${n} imagen${n !== 1 ? 'es' : ''} subida${n !== 1 ? 's' : ''}` : '' }
     if (idx === 5) return data.logo_url ? 'Logo subido ✓' : ''
     if (idx === 6) { const n = data.amenity_ids.length; return n > 0 ? `${n} servicio${n !== 1 ? 's' : ''} seleccionado${n !== 1 ? 's' : ''}` : 'Sin servicios' }
+    if (idx === 7) { const n = data.events.length; return n > 0 ? `${n} promoción${n !== 1 ? 'es' : ''} agregada${n !== 1 ? 's' : ''}` : 'Sin promociones (opcional)' }
     return ''
   }
 
@@ -1414,6 +1890,7 @@ export default function RegisterWizard() {
       image_urls: data.image_urls,
       logo_url: data.logo_url || null,
       services: data.services,
+      events: data.events,
     })
     setSubmitting(false)
     if (error) { setSectionError('Error al enviar. Por favor intenta de nuevo.'); console.error(error); return }
@@ -1479,6 +1956,8 @@ export default function RegisterWizard() {
       session={session}
       services={data.services}
       onServicesChange={(s) => set('services', s)}
+      events={data.events}
+      onEventsChange={(e) => set('events', e)}
     />
   )
 
@@ -1492,6 +1971,7 @@ export default function RegisterWizard() {
     4: <Step5 data={data} set={set} session={session} />,
     5: <Step6 data={data} set={set} session={session} />,
     6: <Step7 data={data} set={set} amenities={amenities} amenitiesLoaded={amenitiesLoaded} />,
+    7: <Step8 data={data} set={set} session={session} />,
   }
 
   return (
