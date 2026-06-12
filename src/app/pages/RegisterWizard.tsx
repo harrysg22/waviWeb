@@ -875,6 +875,7 @@ function ReviewScreen({
   submitting, error, bannerDismissed, onDismissBanner, session,
   services, onServicesChange,
   events, onEventsChange,
+  promos, onPromosChange,
 }: {
   getSummary:       (idx: number) => string
   onEdit:           (idx: number) => void
