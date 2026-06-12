@@ -4,11 +4,16 @@ import { supabase } from '@/lib/supabase'
 import {
   Loader2, ArrowLeft, Building2, MapPin, Clock, Phone,
   CheckCircle2, XCircle, AlertCircle, Check, ImageIcon, Sparkles,
+  Wrench, CalendarDays,
 } from 'lucide-react'
 
 const DAYS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const METHOD_LABEL: Record<string, string> = {
   phone: 'Teléfono', whatsapp: 'WhatsApp', website: 'Sitio web', instagram: 'Instagram',
+}
+const CHARGE_LABEL: Record<string, string> = {
+  gratis: 'Gratis', con_consumo: 'Con consumo',
+  por_persona: 'Por persona', por_servicio: 'Por servicio',
 }
 
 export default function RegistrationDetail() {
@@ -254,9 +259,48 @@ export default function RegistrationDetail() {
             )}
           </Section>
 
-          {/* Promotions */}
+          {/* Services */}
+          {reg.services?.length > 0 && (
+            <Section title="Servicios" icon={<Wrench className="w-4 h-4" />}>
+              <div className="space-y-4">
+                {reg.services.map((svc: any, idx: number) => (
+                  <div key={idx} className="flex gap-4 items-start">
+                    {svc.image_urls?.[0] && (
+                      <a href={svc.image_urls[0]} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                        <img
+                          src={svc.image_urls[0]}
+                          alt={svc.name}
+                          className="w-16 h-16 object-cover rounded-xl border border-white/8 hover:opacity-90 cursor-pointer"
+                        />
+                      </a>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-white text-sm font-semibold">{svc.name}</p>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#25B3CC]/15 text-[#25B3CC] border border-[#25B3CC]/20">
+                          {CHARGE_LABEL[svc.charge_type] ?? svc.charge_type}
+                        </span>
+                      </div>
+                      {(svc.price || svc.duration || svc.capacity) && (
+                        <p className="text-gray-500 text-xs mt-0.5">
+                          {svc.charge_type !== 'gratis' && svc.price ? `$${Number(svc.price).toLocaleString('es-CO')}` : ''}
+                          {svc.duration ? ` · ${svc.duration}` : ''}
+                          {svc.capacity ? ` · ${svc.capacity} personas` : ''}
+                        </p>
+                      )}
+                      {svc.description && (
+                        <p className="text-gray-400 text-xs mt-1 line-clamp-2">{svc.description}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Events */}
           {reg.events?.length > 0 && (
-            <Section title="Promociones" icon={<Sparkles className="w-4 h-4" />}>
+            <Section title="Eventos" icon={<CalendarDays className="w-4 h-4" />}>
               <div className="space-y-4">
                 {reg.events.map((ev: any, idx: number) => (
                   <div key={idx} className="flex gap-4 items-start">
@@ -271,8 +315,43 @@ export default function RegistrationDetail() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-white text-sm font-semibold">{ev.titulo || '—'}</p>
+                      {(ev.fecha_inicio || ev.hora) && (
+                        <p className="text-gray-500 text-xs mt-0.5">
+                          {ev.fecha_inicio ? ev.fecha_inicio : ''}
+                          {ev.fecha_fin && ev.fecha_fin !== ev.fecha_inicio ? ` → ${ev.fecha_fin}` : ''}
+                          {ev.hora ? ` · ${ev.hora}` : ''}
+                          {ev.precio ? ` · $${Number(ev.precio).toLocaleString('es-CO')}` : ''}
+                        </p>
+                      )}
                       {ev.descripcion && (
                         <p className="text-gray-400 text-xs mt-1 leading-relaxed line-clamp-3">{ev.descripcion}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Promotions */}
+          {reg.promos?.length > 0 && (
+            <Section title="Promociones" icon={<Sparkles className="w-4 h-4" />}>
+              <div className="space-y-4">
+                {reg.promos.map((promo: any, idx: number) => (
+                  <div key={idx} className="flex gap-4 items-start">
+                    {promo.image_url && (
+                      <a href={promo.image_url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                        <img
+                          src={promo.image_url}
+                          alt={promo.titulo}
+                          className="w-20 h-20 object-cover rounded-xl border border-white/8 hover:opacity-90 transition-opacity cursor-pointer"
+                        />
+                      </a>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-semibold">{promo.titulo || '—'}</p>
+                      {promo.descripcion && (
+                        <p className="text-gray-400 text-xs mt-1 leading-relaxed line-clamp-3">{promo.descripcion}</p>
                       )}
                     </div>
                   </div>

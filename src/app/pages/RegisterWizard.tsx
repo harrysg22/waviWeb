@@ -41,6 +41,13 @@ interface EventEntry {
   image_urls:   string[]
 }
 
+interface PromoEntry {
+  id:          string
+  titulo:      string
+  descripcion: string
+  image_url:   string  // flyer, puede ser ''
+}
+
 interface WizardData {
   business_name:    string
   category_ids:     number[]
@@ -61,6 +68,7 @@ interface WizardData {
   logo_url:         string
   services:         ServiceEntry[]
   events:           EventEntry[]
+  promos:           PromoEntry[]
 }
 
 const INITIAL_HOURS: HourEntry[] = [
@@ -78,7 +86,7 @@ const INITIAL_DATA: WizardData = {
   description: '', mean_price: '', address: '', zone_id: null,
   location_lat: null, location_lng: null, business_hours: INITIAL_HOURS,
   amenity_ids: [], phone: '', whatsapp: '', website: '', instagram: '',
-  image_urls: [], logo_url: '', services: [], events: [],
+  image_urls: [], logo_url: '', services: [], events: [], promos: [],
 }
 
 function generateTimeOptions(): string[] {
@@ -109,10 +117,9 @@ const SECTIONS = [
   { label: 'IMÁGENES',  title: 'Imágenes' },
   { label: 'LOGO',      title: 'Logo' },
   { label: 'SERVICIOS', title: 'Servicios extra' },
-  { label: 'PROMOS',    title: 'Promociones' },
 ]
 const PART1_INDICES = [0, 1, 2, 3]
-const PART2_INDICES = [4, 5, 6, 7]
+const PART2_INDICES = [4, 5, 6]
 
 /* ─── Image upload helper ────────────────────────────────────────────────────── */
 async function uploadImage(file: File, userId: string, type: 'main' | 'logo'): Promise<string> {
@@ -882,6 +889,8 @@ function ReviewScreen({
   onServicesChange: (s: ServiceEntry[]) => void
   events:           EventEntry[]
   onEventsChange:   (e: EventEntry[]) => void
+  promos:           PromoEntry[]
+  onPromosChange:   (p: PromoEntry[]) => void
 }) {
   /* ── Services state ── */
   const [servicesOpen,  setServicesOpen]  = useState(false)
@@ -977,6 +986,39 @@ function ReviewScreen({
   const fmtDate = (d: string) => {
     if (!d) return ''
     return new Date(d + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
+  }
+
+  /* ── Promos state ── */
+  const [promosOpen,     setPromosOpen]     = useState(false)
+  const [draftPromo,     setDraftPromo]     = useState<PromoEntry | null>(null)
+  const [editingPromoId, setEditingPromoId] = useState<string | null>(null)
+  const [uploadingPromo, setUploadingPromo] = useState(false)
+  const [promoError,     setPromoError]     = useState<string | null>(null)
+
+  const BLANK_PROMO = (): PromoEntry => ({ id: Date.now().toString(), titulo: '', descripcion: '', image_url: '' })
+  const setPromoField   = (k: keyof PromoEntry, v: any) => { setDraftPromo(p => p ? { ...p, [k]: v } : p); setPromoError(null) }
+  const openAddPromo    = () => { setEditingPromoId(null); setDraftPromo(BLANK_PROMO()); setPromoError(null) }
+  const openEditPromo   = (p: PromoEntry) => { setEditingPromoId(p.id); setDraftPromo({ ...p }); setPromoError(null) }
+  const cancelPromoForm = () => { setDraftPromo(null); setEditingPromoId(null); setPromoError(null) }
+  const savePromo = () => {
+    if (!draftPromo?.titulo.trim()) { setPromoError('El título es obligatorio.'); return }
+    if (editingPromoId) onPromosChange(promos.map(p => p.id === editingPromoId ? draftPromo : p))
+    else onPromosChange([...promos, draftPromo])
+    cancelPromoForm()
+  }
+  const deletePromo = (id: string) => onPromosChange(promos.filter(p => p.id !== id))
+
+  const handleUploadPromoFlyer = async (file: File) => {
+    setUploadingPromo(true); setPromoError(null)
+    try {
+      const ext  = file.name.split('.').pop() ?? 'jpg'
+      const path = `${session.user.id}/promo-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('business-registrations').upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      const { data: ud } = supabase.storage.from('business-registrations').getPublicUrl(path)
+      setDraftPromo(p => p ? { ...p, image_url: ud.publicUrl } : p)
+    } catch (err: any) { setPromoError(err?.message ?? 'Error al subir el flyer.') }
+    setUploadingPromo(false)
   }
 
   return (
@@ -1521,19 +1563,165 @@ function ReviewScreen({
             </button>
           )}
 
-          {/* Promociones card */}
-          <button type="button"
-            className="w-full relative overflow-hidden rounded-2xl h-24 flex items-end p-4 text-left">
-            <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${PROMO_CARD.from}, ${PROMO_CARD.to})` }} />
-            <div className="absolute inset-0 flex items-center justify-end pr-6 opacity-20">
-              <PROMO_CARD.Icon className="w-20 h-20 text-white" />
+          {/* ── Promociones — card or expanded panel ── */}
+          {promosOpen ? (
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              {/* Panel header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2.5">
+                  <Tag className="w-4 h-4 text-[#D4920A]" />
+                  <span className="font-bold text-gray-900 text-sm">Promociones</span>
+                  {promos.length > 0 && (
+                    <span className="text-xs font-semibold text-[#D4920A] bg-[#D4920A]/10 px-2 py-0.5 rounded-full">
+                      {promos.length} agregada{promos.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => { setPromosOpen(false); cancelPromoForm() }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {draftPromo ? (
+                /* ── Promo form ── */
+                <div className="px-5 py-5 space-y-5">
+                  <p className="font-semibold text-gray-900 text-sm">{editingPromoId ? 'Editar promoción' : 'Nueva promoción'}</p>
+
+                  {/* Título */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Título <span className="text-[#25B3CC]">*</span>
+                    </label>
+                    <input className={inputCls} placeholder="Ej. 2x1 en tragos · Happy Hour · Brunch de fin de semana"
+                      value={draftPromo.titulo} onChange={e => setPromoField('titulo', e.target.value)} maxLength={80} />
+                  </div>
+
+                  {/* Descripción */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Descripción
+                    </label>
+                    <textarea className={`${inputCls} resize-none`} rows={3}
+                      placeholder="Describe los detalles de la promoción..."
+                      value={draftPromo.descripcion} onChange={e => setPromoField('descripcion', e.target.value)} maxLength={300} />
+                    <div className="text-right text-gray-400 text-[11px] mt-1">{draftPromo.descripcion.length}/300</div>
+                  </div>
+
+                  {/* Imagen / Flyer */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      Imagen / Flyer <span className="normal-case font-normal text-gray-400">(opcional)</span>
+                    </label>
+                    {draftPromo.image_url ? (
+                      <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-gray-200 group">
+                        <img src={draftPromo.image_url} alt="" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <button type="button" onClick={() => setPromoField('image_url', '')}
+                            className="bg-red-500/90 text-white text-[10px] font-medium px-3 py-1.5 rounded-lg">
+                            Eliminar
+                          </button>
+                        </div>
+                        {uploadingPromo && (
+                          <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                            <Loader2 className="w-5 h-5 text-[#D4920A] animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <label className="flex items-center gap-3 cursor-pointer rounded-xl border border-dashed border-gray-200 hover:border-[#D4920A]/50 px-4 py-4 transition-all bg-gray-50 hover:bg-[#D4920A]/5">
+                        {uploadingPromo
+                          ? <Loader2 className="w-5 h-5 text-[#D4920A] animate-spin flex-shrink-0" />
+                          : <Upload className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                        }
+                        <div>
+                          <p className="text-gray-600 text-sm font-medium">Subir imagen / flyer</p>
+                          <p className="text-gray-400 text-xs">JPG, PNG o WebP</p>
+                        </div>
+                        <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                          onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadPromoFlyer(f); e.target.value = '' }} />
+                      </label>
+                    )}
+                  </div>
+
+                  {promoError && (
+                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                      <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                      <p className="text-red-600 text-sm">{promoError}</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-1">
+                    <button onClick={savePromo}
+                      className="flex-1 bg-[#D4920A] hover:bg-[#B87A08] text-white font-semibold py-3 rounded-xl text-sm transition-all">
+                      {editingPromoId ? 'Guardar cambios' : 'Guardar promoción'}
+                    </button>
+                    <button onClick={cancelPromoForm}
+                      className="px-5 text-gray-500 hover:text-gray-700 font-medium text-sm transition-colors">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ── Promos list ── */
+                <div className="px-5 py-4 space-y-3">
+                  {promos.length === 0 && (
+                    <p className="text-gray-400 text-sm text-center py-4">Aún no has agregado promociones.</p>
+                  )}
+                  {promos.map(promo => (
+                    <div key={promo.id} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3">
+                      {promo.image_url ? (
+                        <img src={promo.image_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-[#D4920A]/10 flex items-center justify-center flex-shrink-0">
+                          <Tag className="w-5 h-5 text-[#D4920A]" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm">{promo.titulo}</p>
+                        {promo.descripcion && <p className="text-gray-400 text-xs mt-0.5 line-clamp-2">{promo.descripcion}</p>}
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button onClick={() => openEditPromo(promo)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-[#D4920A] hover:bg-[#D4920A]/8 transition-all">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => deletePromo(promo.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={openAddPromo}
+                    className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#D4920A]/40 hover:border-[#D4920A] text-[#D4920A] font-semibold py-3 rounded-xl text-sm transition-all hover:bg-[#D4920A]/5">
+                    <Plus className="w-4 h-4" /> Agregar promoción
+                  </button>
+                </div>
+              )}
             </div>
-            <span className="relative text-white font-bold text-lg drop-shadow">{PROMO_CARD.label}</span>
-            <div className="absolute bottom-3 right-3 bg-white rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm">
-              <Info className="w-3.5 h-3.5 text-amber-500" />
-              <span className="text-gray-700 text-xs font-semibold">0/1</span>
-            </div>
-          </button>
+          ) : (
+            /* ── Promociones card ── */
+            <button type="button" onClick={() => setPromosOpen(true)}
+              className="w-full relative overflow-hidden rounded-2xl h-24 flex items-end p-4 text-left">
+              <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${PROMO_CARD.from}, ${PROMO_CARD.to})` }} />
+              <div className="absolute inset-0 flex items-center justify-end pr-6 opacity-20">
+                <PROMO_CARD.Icon className="w-20 h-20 text-white" />
+              </div>
+              <span className="relative text-white font-bold text-lg drop-shadow">{PROMO_CARD.label}</span>
+              {promos.length > 0 ? (
+                <div className="absolute bottom-3 right-3 bg-green-500 rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm">
+                  <Check className="w-3 h-3 text-white" />
+                  <span className="text-white text-xs font-semibold">{promos.length}</span>
+                </div>
+              ) : (
+                <div className="absolute bottom-3 right-3 bg-white rounded-xl px-2.5 py-1 flex items-center gap-1.5 shadow-sm">
+                  <Info className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="text-gray-700 text-xs font-semibold">0/1</span>
+                </div>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Submit */}
@@ -1557,162 +1745,6 @@ function ReviewScreen({
         </div>
 
       </div>
-    </div>
-  )
-}
-
-/* ─── Step 8 — Promociones ───────────────────────────────────────────────────── */
-const MAX_PROMOS = 3
-
-function Step8({ data, set, session }: { data: WizardData; set: (k: keyof WizardData, v: any) => void; session: any }) {
-  const [form,       setForm]       = useState({ titulo: '', descripcion: '', image_url: '' })
-  const [uploading,  setUploading]  = useState(false)
-  const [uploadErr,  setUploadErr]  = useState<string | null>(null)
-  const [showForm,   setShowForm]   = useState(data.events.length === 0)
-
-  const events = data.events
-
-  const handleFlyer = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ''
-    setUploading(true); setUploadErr(null)
-    try {
-      const ext  = file.name.split('.').pop() ?? 'jpg'
-      const path = `${session.user.id}/promo-${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage
-        .from('business-registrations')
-        .upload(path, file, { upsert: true })
-      if (upErr) throw upErr
-      const { data: urlData } = supabase.storage.from('business-registrations').getPublicUrl(path)
-      setForm(f => ({ ...f, image_url: urlData.publicUrl }))
-    } catch (err: any) {
-      setUploadErr(err?.message ?? 'Error al subir el flyer.')
-    }
-    setUploading(false)
-  }
-
-  const addPromo = () => {
-    if (!form.titulo.trim()) return
-    const newEvent: EventEntry = {
-      id:           crypto.randomUUID(),
-      titulo:       form.titulo.trim(),
-      descripcion:  form.descripcion.trim(),
-      image_urls:   form.image_url ? [form.image_url] : [],
-      fecha_inicio: '', fecha_fin: '', duracion: '', hora: '', precio: '',
-    }
-    set('events', [...events, newEvent])
-    setForm({ titulo: '', descripcion: '', image_url: '' })
-    setShowForm(false)
-  }
-
-  const removePromo = (id: string) => {
-    set('events', events.filter((e: EventEntry) => e.id !== id))
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start gap-2.5 bg-[#25B3CC]/8 border border-[#25B3CC]/20 rounded-xl px-4 py-3">
-        <AlertCircle className="w-4 h-4 text-[#25B3CC] shrink-0 mt-0.5" />
-        <p className="text-gray-600 text-sm leading-relaxed">
-          Esta sección es <span className="font-semibold text-gray-800">opcional</span>. Puedes agregar hasta {MAX_PROMOS} promociones o eventos activos de tu negocio.
-        </p>
-      </div>
-
-      {/* Lista de promos agregadas */}
-      {events.length > 0 && (
-        <div className="space-y-2">
-          {events.map((ev: EventEntry) => (
-            <div key={ev.id} className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3">
-              {ev.image_urls[0] ? (
-                <img src={ev.image_urls[0]} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-200" />
-              ) : (
-                <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <ImageIcon className="w-6 h-6 text-gray-300" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-gray-800 text-sm font-semibold truncate">{ev.titulo}</p>
-                {ev.descripcion && <p className="text-gray-400 text-xs truncate mt-0.5">{ev.descripcion}</p>}
-              </div>
-              <button type="button" onClick={() => removePromo(ev.id)}
-                className="text-red-400 hover:text-red-500 text-xs font-medium flex-shrink-0 transition-colors">
-                Eliminar
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Botón agregar */}
-      {!showForm && events.length < MAX_PROMOS && (
-        <button type="button" onClick={() => setShowForm(true)}
-          className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-[#25B3CC]/40 text-gray-400 hover:text-[#25B3CC] rounded-xl py-3 text-sm font-medium transition-all">
-          <span className="text-lg leading-none">+</span> Agregar promoción
-        </button>
-      )}
-
-      {/* Mini-formulario inline */}
-      {showForm && (
-        <div className="border border-[#25B3CC]/30 rounded-2xl p-4 space-y-3 bg-[#25B3CC]/3">
-          <p className="text-gray-700 text-sm font-semibold">Nueva promoción</p>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-              Título <span className="text-[#25B3CC]">*</span>
-            </label>
-            <input className={inputCls} placeholder="Ej. 2x1 en tragos · Happy Hour · Brunch de fin de semana"
-              value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} maxLength={80} />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Descripción</label>
-            <textarea className={`${inputCls} resize-none`} rows={3}
-              placeholder="Describe los detalles de la promoción..."
-              value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))} maxLength={300} />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Imagen / Flyer</label>
-            <label className={`flex items-center gap-3 cursor-pointer rounded-xl border transition-all px-4 py-3 ${
-              form.image_url ? 'border-[#25B3CC]/40 bg-[#25B3CC]/5' : 'border-gray-200 hover:border-gray-300 bg-white'
-            }`}>
-              {uploading ? (
-                <Loader2 className="w-5 h-5 text-[#25B3CC] animate-spin flex-shrink-0" />
-              ) : form.image_url ? (
-                <img src={form.image_url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200" />
-              ) : (
-                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <Upload className="w-4 h-4 text-gray-400" />
-                </div>
-              )}
-              <div className="flex-1">
-                <p className="text-gray-700 text-sm font-medium">
-                  {form.image_url ? 'Flyer subido ✓' : 'Subir imagen / flyer'}
-                </p>
-                <p className="text-gray-400 text-xs">JPG, PNG o WebP · Opcional</p>
-              </div>
-              {form.image_url && (
-                <button type="button" onClick={e => { e.preventDefault(); setForm(f => ({ ...f, image_url: '' })) }}
-                  className="text-gray-400 hover:text-red-400 text-xs transition-colors">Quitar</button>
-              )}
-              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFlyer} className="hidden" />
-            </label>
-            {uploadErr && <p className="text-red-500 text-xs mt-1">{uploadErr}</p>}
-          </div>
-
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={addPromo} disabled={!form.titulo.trim()}
-              className="flex-1 bg-[#25B3CC] hover:bg-[#1E9DB5] disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-all">
-              Guardar promoción
-            </button>
-            <button type="button" onClick={() => { setShowForm(false); setForm({ titulo: '', descripcion: '', image_url: '' }) }}
-              className="px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2.5 rounded-xl text-sm transition-all">
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -1891,6 +1923,7 @@ export default function RegisterWizard() {
       logo_url: data.logo_url || null,
       services: data.services,
       events: data.events,
+      promos: data.promos,
     })
     setSubmitting(false)
     if (error) { setSectionError('Error al enviar. Por favor intenta de nuevo.'); console.error(error); return }
@@ -1958,6 +1991,8 @@ export default function RegisterWizard() {
       onServicesChange={(s) => set('services', s)}
       events={data.events}
       onEventsChange={(e) => set('events', e)}
+      promos={data.promos}
+      onPromosChange={(p) => set('promos', p)}
     />
   )
 
@@ -1971,7 +2006,6 @@ export default function RegisterWizard() {
     4: <Step5 data={data} set={set} session={session} />,
     5: <Step6 data={data} set={set} session={session} />,
     6: <Step7 data={data} set={set} amenities={amenities} amenitiesLoaded={amenitiesLoaded} />,
-    7: <Step8 data={data} set={set} session={session} />,
   }
 
   return (

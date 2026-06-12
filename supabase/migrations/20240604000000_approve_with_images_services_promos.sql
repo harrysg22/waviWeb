@@ -27,6 +27,8 @@ DECLARE
   v_svc_id      INT;
   v_ev          JSONB;
   v_ev_id       INT;
+  v_promo       JSONB;
+  v_promo_id    INT;
 BEGIN
   -- Solo procesar si está pendiente
   SELECT * INTO v_reg
@@ -112,8 +114,8 @@ BEGIN
   -- 8. Galería de imágenes → image + site_image
   IF array_length(v_reg.image_urls, 1) > 0 THEN
     FOREACH v_img_url IN ARRAY v_reg.image_urls LOOP
-      INSERT INTO image (img_url, type, date, visible, company_id)
-      VALUES (v_img_url, 'cover', NOW(), true, v_company_id)
+      INSERT INTO image (img_url, type, date, visible, name, description, company_id)
+      VALUES (v_img_url, 'cover', NOW(), true, v_reg.business_name, v_reg.business_name, v_company_id)
       RETURNING id INTO v_img_id;
 
       INSERT INTO site_image (site_id, image_id)
@@ -148,8 +150,8 @@ BEGIN
     FOR v_img_url IN
       SELECT jsonb_array_elements_text(COALESCE(v_svc->'image_urls', '[]'::jsonb))
     LOOP
-      INSERT INTO image (img_url, type, date, visible, company_id)
-      VALUES (v_img_url, 'cover', NOW(), true, v_company_id)
+      INSERT INTO image (img_url, type, date, visible, name, description, company_id)
+      VALUES (v_img_url, 'cover', NOW(), true, v_svc->>'name', v_svc->>'name', v_company_id)
       RETURNING id INTO v_img_id;
 
       INSERT INTO service_image (service_id, image_id)
@@ -166,8 +168,8 @@ BEGIN
       v_site_id,
       v_ev->>'titulo',
       v_ev->>'descripcion',
-      NULLIF(v_ev->>'fecha_inicio', '')::DATE,
-      NULLIF(v_ev->>'fecha_fin', '')::DATE,
+      NULLIF(v_ev->>'fecha_inicio', '')::TIMESTAMPTZ,
+      NULLIF(v_ev->>'fecha_fin',    '')::TIMESTAMPTZ,
       NULLIF(v_ev->>'precio', '')::NUMERIC,
       true
     )
@@ -177,13 +179,30 @@ BEGIN
     FOR v_img_url IN
       SELECT jsonb_array_elements_text(COALESCE(v_ev->'image_urls', '[]'::jsonb))
     LOOP
-      INSERT INTO image (img_url, type, date, visible, company_id)
-      VALUES (v_img_url, 'cover', NOW(), true, v_company_id)
+      INSERT INTO image (img_url, type, date, visible, name, description, company_id)
+      VALUES (v_img_url, 'cover', NOW(), true, v_ev->>'titulo', v_ev->>'titulo', v_company_id)
       RETURNING id INTO v_img_id;
 
       INSERT INTO event_image (event_id, image_id)
       VALUES (v_ev_id, v_img_id);
     END LOOP;
+  END LOOP;
+
+  -- 10b. Promociones → event (sin fechas) + event_image
+  FOR v_promo IN SELECT * FROM jsonb_array_elements(COALESCE(v_reg.promos, '[]'::jsonb)) LOOP
+    INSERT INTO event (site_id, title, description, active)
+    VALUES (v_site_id, v_promo->>'titulo', v_promo->>'descripcion', true)
+    RETURNING id INTO v_promo_id;
+
+    -- Flyer de la promo (image_url es string simple, no array)
+    IF (v_promo->>'image_url') IS NOT NULL AND trim(v_promo->>'image_url') <> '' THEN
+      INSERT INTO image (img_url, type, date, visible, name, description, company_id)
+      VALUES (v_promo->>'image_url', 'cover', NOW(), true,
+              v_promo->>'titulo', v_promo->>'titulo', v_company_id)
+      RETURNING id INTO v_img_id;
+
+      INSERT INTO event_image (event_id, image_id) VALUES (v_promo_id, v_img_id);
+    END IF;
   END LOOP;
 
   -- 11. Cambiar tipo de cuenta a 'establecimiento'
