@@ -9,7 +9,6 @@ import {
   Heart, Coffee, Users, Pencil, Trash2, Plus,
 } from 'lucide-react'
 
-declare const google: any
 
 /* ─── Types ──────────────────────────────────────────────────────────────────── */
 interface Category    { id: number; name: string }
@@ -377,63 +376,6 @@ function Step1({ data, set, categories, cuisineTypes }: {
 function Step2({ data, set, zones }: {
   data: WizardData; set: (k: keyof WizardData, v: any) => void; zones: Zone[]
 }) {
-  const addressRef     = useRef<HTMLInputElement>(null)
-  const mapRef         = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
-  const markerRef      = useRef<any>(null)
-  const [mapsReady,  setMapsReady]  = useState(false)
-  const [mapsError,  setMapsError]  = useState(false)
-  const hasKey = !!import.meta.env.VITE_GOOGLE_MAPS_KEY
-
-  useEffect(() => {
-    if (!hasKey) return
-    // Global auth failure callback — called by Google when key is invalid
-    ;(window as any).gm_authFailure = () => setMapsError(true)
-
-    if ((window as any).google?.maps) { setMapsReady(true); return }
-    const existing = document.querySelector('script[src*="maps.googleapis.com"]')
-    if (existing) {
-      existing.addEventListener('load', () => setMapsReady(true))
-      existing.addEventListener('error', () => setMapsError(true))
-      return
-    }
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}&libraries=places`
-    script.async = true
-    script.onload  = () => setMapsReady(true)
-    script.onerror = () => setMapsError(true)
-    document.head.appendChild(script)
-    return () => { delete (window as any).gm_authFailure }
-  }, [hasKey])
-
-  useEffect(() => {
-    if (!mapsReady || mapsError || !mapRef.current || mapInstanceRef.current) return
-    const center = { lat: data.location_lat ?? 4.711, lng: data.location_lng ?? -74.0721 }
-    const map = new google.maps.Map(mapRef.current, { center, zoom: data.location_lat ? 16 : 12, disableDefaultUI: true, zoomControl: true })
-    const marker = new google.maps.Marker({ position: center, map, draggable: true, visible: !!data.location_lat })
-    marker.addListener('dragend', (e: any) => { set('location_lat', e.latLng.lat()); set('location_lng', e.latLng.lng()) })
-    mapInstanceRef.current = map; markerRef.current = marker
-  }, [mapsReady, mapsError])
-
-  useEffect(() => {
-    if (!mapsReady || mapsError || !addressRef.current) return
-    const ac = new google.maps.places.Autocomplete(addressRef.current, {
-      componentRestrictions: { country: 'co' }, fields: ['geometry', 'formatted_address'],
-    })
-    ac.addListener('place_changed', () => {
-      const place = ac.getPlace()
-      if (!place.geometry?.location) return
-      const lat = place.geometry.location.lat(); const lng = place.geometry.location.lng()
-      set('address', place.formatted_address); set('location_lat', lat); set('location_lng', lng)
-      if (mapInstanceRef.current && markerRef.current) {
-        mapInstanceRef.current.setCenter({ lat, lng }); mapInstanceRef.current.setZoom(17)
-        markerRef.current.setPosition({ lat, lng }); markerRef.current.setVisible(true)
-      }
-    })
-  }, [mapsReady, mapsError])
-
-  const showMap = hasKey && !mapsError
-
   return (
     <div className="space-y-4">
       <div>
@@ -442,36 +384,11 @@ function Step2({ data, set, zones }: {
         </label>
         <div className="relative">
           <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input ref={addressRef} className={`${inputCls} pl-10`}
+          <input className={`${inputCls} pl-10`}
             placeholder="Ingresa la dirección completa de tu negocio"
             value={data.address} onChange={e => set('address', e.target.value)} />
         </div>
-        {mapsError && (
-          <p className="text-amber-600 text-xs mt-1.5 flex items-center gap-1.5">
-            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-            El autocompletado no está disponible. Puedes escribir la dirección manualmente.
-          </p>
-        )}
       </div>
-
-      {/* Map — hidden when error to avoid Google's error overlay */}
-      <div
-        ref={mapRef}
-        className={`w-full h-44 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center ${!showMap ? 'hidden' : ''}`}
-      />
-      {!hasKey && (
-        <div className="w-full h-44 rounded-xl border border-gray-100 bg-gray-50 flex items-center justify-center">
-          <div className="flex items-center gap-2 text-gray-400 text-sm">
-            <MapPin className="w-4 h-4" /> Mapa no disponible
-          </div>
-        </div>
-      )}
-
-      {data.location_lat && !mapsError && (
-        <p className="text-gray-500 text-xs flex items-center gap-1.5">
-          <Check className="w-3 h-3 text-[#25B3CC]" /> Puedes arrastrar el pin para afinar la posición.
-        </p>
-      )}
 
       <div>
         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
@@ -487,12 +404,6 @@ function Step2({ data, set, zones }: {
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
       </div>
-      {data.location_lat && data.location_lng && (
-        <div className="flex items-center gap-2 bg-[#25B3CC]/8 border border-[#25B3CC]/20 rounded-xl px-4 py-2.5">
-          <Check className="w-4 h-4 text-[#25B3CC] shrink-0" />
-          <span className="text-[#25B3CC] text-xs">Coordenadas: {data.location_lat.toFixed(5)}, {data.location_lng.toFixed(5)}</span>
-        </div>
-      )}
     </div>
   )
 }

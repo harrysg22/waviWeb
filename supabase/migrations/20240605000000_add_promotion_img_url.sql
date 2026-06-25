@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Migration: update approve_business_registration to handle
---   logo_url, image_urls (gallery), services, and events/promos
+-- Migration: actualiza approve_business_registration para setear
+--   promotion_img_url al aprobar (columna ya agregada manualmente)
 -- Run once in Supabase Studio → SQL Editor → Run
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -21,7 +21,6 @@ DECLARE
   v_account_id  INT;
   v_hour        JSONB;
   v_contact     JSONB;
-  -- new
   v_img_url     TEXT;
   v_img_id      INT;
   v_svc         JSONB;
@@ -31,7 +30,6 @@ DECLARE
   v_promo       JSONB;
   v_promo_id    INT;
 BEGIN
-  -- Solo procesar si está pendiente
   SELECT * INTO v_reg
   FROM business_registration
   WHERE id = p_registration_id AND status = 'pending';
@@ -40,11 +38,9 @@ BEGIN
     RAISE EXCEPTION 'Registro % no encontrado o ya procesado', p_registration_id;
   END IF;
 
-  -- Obtener account.id del solicitante (company lo requiere como FK)
   SELECT id INTO v_account_id FROM account WHERE auth_id = v_reg.auth_id;
 
-  -- Pre-cleanup: eliminar cualquier company/site huérfana de intentos anteriores
-  -- Solo aplica si la cuenta aún no fue aprobada (tipo = 'cliente')
+  -- Pre-cleanup: eliminar company/site huérfana de intentos anteriores
   IF EXISTS (SELECT 1 FROM account WHERE id = v_account_id AND tipo = 'cliente') THEN
     FOR v_company_id IN SELECT id FROM company WHERE account_id = v_account_id LOOP
       FOR v_site_id IN SELECT id FROM site WHERE company_id = v_company_id LOOP
@@ -94,14 +90,14 @@ BEGIN
   )
   RETURNING id INTO v_site_id;
 
-  -- 3. Categorías del negocio
+  -- 3. Categorías
   FOREACH v_id IN ARRAY v_reg.category_ids LOOP
     INSERT INTO company_category (company_id, category_id)
     VALUES (v_company_id, v_id)
     ON CONFLICT DO NOTHING;
   END LOOP;
 
-  -- 4. Tipos de cocina (solo si aplica)
+  -- 4. Tipos de cocina
   IF array_length(v_reg.cuisine_type_ids, 1) > 0 THEN
     FOREACH v_id IN ARRAY v_reg.cuisine_type_ids LOOP
       INSERT INTO site_cuisine (site_id, cuisine_type_id)
@@ -110,7 +106,7 @@ BEGIN
     END LOOP;
   END IF;
 
-  -- 5. Horarios (start_time / end_time en formato "H:MM AM/PM" para Flutter)
+  -- 5. Horarios (formato "H:MM AM/PM" para Flutter)
   FOR v_hour IN SELECT * FROM jsonb_array_elements(v_reg.business_hours) LOOP
     INSERT INTO business_hours (site_id, weekday, start_time, end_time)
     VALUES (
@@ -121,7 +117,7 @@ BEGIN
     );
   END LOOP;
 
-  -- 6. Comodidades / amenidades
+  -- 6. Amenidades
   IF array_length(v_reg.amenity_ids, 1) > 0 THEN
     FOREACH v_id IN ARRAY v_reg.amenity_ids LOOP
       INSERT INTO site_additional_services (site_id, additional_services_id, details)
@@ -130,27 +126,21 @@ BEGIN
     END LOOP;
   END IF;
 
-  -- 7. Contactos (solo los que tienen link no vacío)
+  -- 7. Contactos
   FOR v_contact IN SELECT * FROM jsonb_array_elements(v_reg.contacts) LOOP
     IF (v_contact->>'link') IS NOT NULL AND trim(v_contact->>'link') <> '' THEN
       INSERT INTO company_contact (company_id, link, method)
-      VALUES (
-        v_company_id,
-        v_contact->>'link',
-        v_contact->>'method'
-      );
+      VALUES (v_company_id, v_contact->>'link', v_contact->>'method');
     END IF;
   END LOOP;
 
-  -- 8. Galería de imágenes → image + site_image
+  -- 8. Galería → image + site_image
   IF array_length(v_reg.image_urls, 1) > 0 THEN
     FOREACH v_img_url IN ARRAY v_reg.image_urls LOOP
       INSERT INTO image (img_url, type, date, visible, name, description, company_id)
       VALUES (v_img_url, 'profile', NOW(), true, v_reg.business_name, v_reg.business_name, v_company_id)
       RETURNING id INTO v_img_id;
-
-      INSERT INTO site_image (site_id, image_id)
-      VALUES (v_site_id, v_img_id);
+      INSERT INTO site_image (site_id, image_id) VALUES (v_site_id, v_img_id);
     END LOOP;
   END IF;
 
@@ -177,20 +167,17 @@ BEGIN
     )
     RETURNING id INTO v_svc_id;
 
-    -- Imágenes del servicio
     FOR v_img_url IN
       SELECT jsonb_array_elements_text(COALESCE(v_svc->'image_urls', '[]'::jsonb))
     LOOP
       INSERT INTO image (img_url, type, date, visible, name, description, company_id)
       VALUES (v_img_url, 'cover', NOW(), true, v_svc->>'name', v_svc->>'name', v_company_id)
       RETURNING id INTO v_img_id;
-
-      INSERT INTO service_image (service_id, image_id)
-      VALUES (v_svc_id, v_img_id);
+      INSERT INTO service_image (service_id, image_id) VALUES (v_svc_id, v_img_id);
     END LOOP;
   END LOOP;
 
-  -- 10. Promociones/Eventos → event + event_image
+  -- 10. Eventos → event + event_image
   FOR v_ev IN SELECT * FROM jsonb_array_elements(COALESCE(v_reg.events, '[]'::jsonb)) LOOP
     INSERT INTO event (
       site_id, title, description,
@@ -206,32 +193,34 @@ BEGIN
     )
     RETURNING id INTO v_ev_id;
 
-    -- Imágenes del evento (flyer)
     FOR v_img_url IN
       SELECT jsonb_array_elements_text(COALESCE(v_ev->'image_urls', '[]'::jsonb))
     LOOP
       INSERT INTO image (img_url, type, date, visible, name, description, company_id)
       VALUES (v_img_url, 'cover', NOW(), true, v_ev->>'titulo', v_ev->>'titulo', v_company_id)
       RETURNING id INTO v_img_id;
-
-      INSERT INTO event_image (event_id, image_id)
-      VALUES (v_ev_id, v_img_id);
+      INSERT INTO event_image (event_id, image_id) VALUES (v_ev_id, v_img_id);
     END LOOP;
   END LOOP;
 
   -- 10b. Promociones → promotion + promotion_image
+  --      promotion_img_url se setea directo en la fila para que la app Flutter lo lea sin JOIN
   FOR v_promo IN SELECT * FROM jsonb_array_elements(COALESCE(v_reg.promos, '[]'::jsonb)) LOOP
-    INSERT INTO promotion (site_id, title, description, active)
-    VALUES (v_site_id, v_promo->>'titulo', v_promo->>'descripcion', true)
+    INSERT INTO promotion (site_id, title, description, active, promotion_img_url)
+    VALUES (
+      v_site_id,
+      v_promo->>'titulo',
+      v_promo->>'descripcion',
+      true,
+      NULLIF(v_promo->>'image_url', '')
+    )
     RETURNING id INTO v_promo_id;
 
-    -- Flyer de la promo (image_url es string simple, no array)
     IF (v_promo->>'image_url') IS NOT NULL AND trim(v_promo->>'image_url') <> '' THEN
       INSERT INTO image (img_url, type, date, visible, name, description, company_id)
       VALUES (v_promo->>'image_url', 'cover', NOW(), true,
               v_promo->>'titulo', v_promo->>'titulo', v_company_id)
       RETURNING id INTO v_img_id;
-
       INSERT INTO promotion_image (promotion_id, image_id) VALUES (v_promo_id, v_img_id);
     END IF;
   END LOOP;
@@ -256,6 +245,6 @@ BEGIN
   );
 
 EXCEPTION WHEN OTHERS THEN
-  RAISE; -- rollback automático de toda la transacción
+  RAISE;
 END;
 $$;
