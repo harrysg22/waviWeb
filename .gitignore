@@ -51,3 +51,6 @@ app.*.map.json
 android/key.properties
 
 .cursorrules
+
+# Vite build output (Cloudflare Pages builds this from source)
+dist/
