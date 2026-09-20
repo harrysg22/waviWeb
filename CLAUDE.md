@@ -33,17 +33,27 @@ This is a React + Vite + TypeScript marketing/landing page for the Wavi mobile a
 - `/descargar` — Download page
 - `/register` — `RegisterWizard` (multi-step business onboarding form)
 - `/register/done` — `RegisterSuccess` (post-submission confirmation)
-- `/admin` — `AdminDashboard` (protected; lists business registrations by status)
+- `/portal` — `BusinessPortal` (protected via `ProtectedBusinessRoute`; self-service dashboard for approved businesses)
+- `/portal/info` — `PortalInfo` (protected; edit business profile, hours, contact info)
+- `/portal/services` — `PortalServices` (protected; manage services)
+- `/portal/promos` — `PortalPromos` (protected; manage promotions)
+- `/portal/events` — `PortalEvents` (protected; manage events)
+- `/admin` — `AdminDashboard` (protected via `ProtectedAdminRoute`; lists business registrations by status)
 - `/admin/:id` — `RegistrationDetail` (protected; review and approve/reject a single registration)
+- `/admin/edits/:id` — `EditRequestDetail` (protected; review and approve/reject a single business edit request — see "Business Portal" below)
 
-**Home page** (`src/app/pages/Home.tsx`) is a single scrollable page composed of ordered section components: `Navbar → HeroSection → AboutUsSection → DownloadAppSection → ExperiencesSection → BenefitsSection → BusinessSection → TestimonialsSection → FinalCTASection → Footer`. Hash-based scroll navigation is handled via `useLocation`.
+**Home page** (`src/app/pages/marketing/Home.tsx`) is a single scrollable page composed of ordered section components: `Navbar → HeroSection → AboutUsSection → DownloadAppSection → ExperiencesSection → BenefitsSection → BusinessSection → TestimonialsSection → FinalCTASection → Footer`. Hash-based scroll navigation is handled via `useLocation`.
 
-**Component layers**:
-- `src/app/components/` — page-specific section components
-- `src/app/components/ui/` — generic shadcn/ui-style primitives (Radix UI + Tailwind wrappers)
-- `src/app/components/figma/` — Figma-originated helpers (e.g. `ImageWithFallback`)
+**Component layers** (`src/app/components/`), grouped by feature:
+- `marketing/` — landing-page section components (`Navbar`, `HeroSection`, `Footer`, etc.)
+- `portal/` — shared UI for the business portal (`PortalHeader`)
+- `auth/` — route guards (`ProtectedAdminRoute`, `ProtectedBusinessRoute`)
+- `ui/` — generic shadcn/ui-style primitives (Radix UI + Tailwind wrappers)
+- `figma/` — Figma-originated helpers (e.g. `ImageWithFallback`)
 
-`WaviBusinessModal.tsx` exists in components but is not imported anywhere — it is dead code.
+**Page layers** (`src/app/pages/`), grouped the same way: `marketing/` (Home, DownloadPage, PrivacyPolicy, TermsAndConditions), `registration/` (RegisterWizard, RegisterSuccess), `portal/` (BusinessPortal, PortalInfo, PortalServices, PortalPromos, PortalEvents), `admin/` (AdminDashboard, RegistrationDetail, EditRequestDetail).
+
+**Export convention**: `components/` use named exports, `pages/` use default exports.
 
 **Animations**: The `motion` package (same API as Framer Motion) is used across section components. Always import as `from 'motion/react'`, not `from 'framer-motion'`.
 
@@ -70,6 +80,17 @@ This is a React + Vite + TypeScript marketing/landing page for the Wavi mobile a
 - `20240604000000_add_promos_to_registration.sql` — adds `promos JSONB` column (array of `{ id, titulo, descripcion, image_url }`)
 - `20240604000000_approve_with_images_services_promos.sql` — replaces `approve_business_registration` to also write `logo_url`, gallery images (`site_image`), services + `service_image`, events + `event_image`, and promotions + `promotion_image`. Includes a pre-cleanup step that deletes orphaned rows from previous failed approval attempts before recreating them.
 - `20240605000000_add_promotion_img_url.sql` — updates `approve_business_registration` to also set `promotion_img_url` directly on the `promotion` row (in addition to `promotion_image`), so the Flutter app can read it without a JOIN. **Never remove this denormalized column** — the Flutter mobile client depends on it.
+
+**Business Portal** (self-service editing for approved businesses):
+1. Once `account.tipo === 'establecimiento'`, the owner can sign in and manage their listing at `/portal/*`, gated by `ProtectedBusinessRoute` (redirects non-business sessions to `/register`, unlike `ProtectedAdminRoute` which redirects to `/`)
+2. `useBusinessSites(authId)` (`src/lib/useBusinessSite.ts`) looks up the account's `company`/`site` rows — supports multi-site accounts, surfaced via a site switcher in `PortalHeader`
+3. Portal edits are **not** written directly to `service`/`promotion`/`event`/`site` — each Portal page inserts into the `business_edit_request` staging table instead (status = `pending`), mirroring the registration-approval pattern above
+4. An admin reviews pending edit requests at `/admin/edits/:id` (`EditRequestDetail`)
+5. **Approve**: calls the `approve-edit-request` Edge Function (`supabase/functions/approve-edit-request/index.ts`), which applies the requested create/update/delete to the live table
+6. **Reject**: sets `status = 'rejected'` on the `business_edit_request` row
+
+**Migrations** (`supabase/migrations/`), continued:
+- `20240607000000_business_edit_requests.sql` — `business_edit_request` table (type: profile/service/promo/event; action: create/update/delete; payload; status: pending/approved/rejected)
 
 **Catalog tables** referenced in RegisterWizard and RegistrationDetail: `category`, `cuisine_type`, `zone`, `additional_services` (used as amenities — note the non-obvious table name).
 
