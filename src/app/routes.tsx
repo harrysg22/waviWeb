@@ -1,20 +1,20 @@
 import { createBrowserRouter } from "react-router";
-import { Home } from "./pages/Home";
-import { TermsAndConditions } from "./pages/TermsAndConditions";
-import { PrivacyPolicy } from "./pages/PrivacyPolicy";
-import DownloadPage from "./pages/DownloadPage";
-import RegisterWizard from "./pages/RegisterWizard";
-import RegisterSuccess from "./pages/RegisterSuccess";
-import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
-import ProtectedBusinessRoute from "./components/ProtectedBusinessRoute";
-import AdminDashboard from "./pages/AdminDashboard";
-import RegistrationDetail from "./pages/RegistrationDetail";
-import EditRequestDetail from "./pages/EditRequestDetail";
-import BusinessPortal from "./pages/BusinessPortal";
-import PortalInfo from "./pages/PortalInfo";
-import PortalServices from "./pages/PortalServices";
-import PortalPromos from "./pages/PortalPromos";
-import PortalEvents from "./pages/PortalEvents";
+import Home from "./pages/marketing/Home";
+import TermsAndConditions from "./pages/marketing/TermsAndConditions";
+import PrivacyPolicy from "./pages/marketing/PrivacyPolicy";
+import DownloadPage from "./pages/marketing/DownloadPage";
+import RegisterWizard from "./pages/registration/RegisterWizard";
+import RegisterSuccess from "./pages/registration/RegisterSuccess";
+import { ProtectedAdminRoute } from "./components/auth/ProtectedAdminRoute";
+import { ProtectedBusinessRoute } from "./components/auth/ProtectedBusinessRoute";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import RegistrationDetail from "./pages/admin/RegistrationDetail";
+import EditRequestDetail from "./pages/admin/EditRequestDetail";
+import BusinessPortal from "./pages/portal/BusinessPortal";
+import PortalInfo from "./pages/portal/PortalInfo";
+import PortalServices from "./pages/portal/PortalServices";
+import PortalPromos from "./pages/portal/PortalPromos";
+import PortalEvents from "./pages/portal/PortalEvents";
 
 export const router = createBrowserRouter([
   {

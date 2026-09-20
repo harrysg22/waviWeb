@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { supabase } from '@/lib/supabase'
 import { useBusinessSites } from '@/lib/useBusinessSite'
-import PortalHeader from '@/app/components/PortalHeader'
+import { PortalHeader } from '@/app/components/portal/PortalHeader'
 import { Loader2, Plus, Pencil, Trash2, X, AlertCircle, CheckCircle2, Clock, Upload } from 'lucide-react'
 
 const inputCls  = 'w-full bg-white border border-gray-200 hover:border-gray-300 focus:border-[#25B3CC] rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 text-sm outline-none transition-all focus:ring-2 focus:ring-[#25B3CC]/15'

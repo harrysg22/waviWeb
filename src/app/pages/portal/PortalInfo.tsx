@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { supabase } from '@/lib/supabase'
 import { useBusinessSites } from '@/lib/useBusinessSite'
-import PortalHeader from '@/app/components/PortalHeader'
+import { PortalHeader } from '@/app/components/portal/PortalHeader'
 import {
   Loader2, AlertCircle, CheckCircle2, ChevronDown,
   Clock, Phone, Globe, Instagram, MessageCircle, Upload,

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { supabase } from '@/lib/supabase'
 import { useBusinessSites } from '@/lib/useBusinessSite'
-import PortalHeader from '@/app/components/PortalHeader'
+import { PortalHeader } from '@/app/components/portal/PortalHeader'
 import { Building2, Wrench, Tag, CalendarDays, ChevronRight, Loader2 } from 'lucide-react'
 
 interface Counts { services: number; promos: number; events: number }

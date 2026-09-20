@@ -1,17 +1,17 @@
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router';
-import { Navbar } from '../components/Navbar';
-import { HeroSection } from '../components/HeroSection';
-import { AboutUsSection } from '../components/AboutUsSection';
-import { DownloadAppSection } from '../components/DownloadAppSection';
-import { ExperiencesSection } from '../components/ExperiencesSection';
-import { BenefitsSection } from '../components/BenefitsSection';
-import { BusinessSection } from '../components/BusinessSection';
-import { TestimonialsSection } from '../components/TestimonialsSection';
-import { FinalCTASection } from '../components/FinalCTASection';
-import { Footer } from '../components/Footer';
+import { Navbar } from '../../components/marketing/Navbar';
+import { HeroSection } from '../../components/marketing/HeroSection';
+import { AboutUsSection } from '../../components/marketing/AboutUsSection';
+import { DownloadAppSection } from '../../components/marketing/DownloadAppSection';
+import { ExperiencesSection } from '../../components/marketing/ExperiencesSection';
+import { BenefitsSection } from '../../components/marketing/BenefitsSection';
+import { BusinessSection } from '../../components/marketing/BusinessSection';
+import { TestimonialsSection } from '../../components/marketing/TestimonialsSection';
+import { FinalCTASection } from '../../components/marketing/FinalCTASection';
+import { Footer } from '../../components/marketing/Footer';
 
-export const Home = () => {
+const Home = () => {
   const location = useLocation();
 
   useEffect(() => {
@@ -45,3 +45,5 @@ export const Home = () => {
     </div>
   );
 };
+
+export default Home;

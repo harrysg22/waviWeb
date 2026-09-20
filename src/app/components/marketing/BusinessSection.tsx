@@ -6,7 +6,7 @@ import {
   Star, Bell, ChevronRight, Apple, Play, CheckCircle2,
   ArrowRight, Zap, Globe, Award, Download
 } from 'lucide-react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { ImageWithFallback } from '../figma/ImageWithFallback';
 
 /* ─── Dual Ecosystem Comparison ─────────────────────────────────────── */
 const EcosystemCard = ({

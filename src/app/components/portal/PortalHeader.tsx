@@ -14,7 +14,7 @@ interface PortalHeaderProps {
   gradientClass?:  string        // e.g. 'bg-[#198A9E]' for sub-pages
 }
 
-export default function PortalHeader({
+export function PortalHeader({
   title,
   subtitle,
   backTo,

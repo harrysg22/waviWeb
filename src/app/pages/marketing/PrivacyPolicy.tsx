@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { Navbar } from '../components/Navbar';
-import { Footer } from '../components/Footer';
+import { Navbar } from '../../components/marketing/Navbar';
+import { Footer } from '../../components/marketing/Footer';
 
-export const TermsAndConditions = () => {
+const PrivacyPolicy = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -158,7 +158,11 @@ export const TermsAndConditions = () => {
               </p>
             </section>
 
-
+            <div className="mt-10 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+              <strong>Nota importante:</strong> Este documento es un borrador técnico basado en el funcionamiento real
+              del código. Antes de publicarlo oficialmente, debe ser revisado y validado por un abogado especializado
+              en protección de datos en Colombia para garantizar el cumplimiento de la Ley 1581 de 2012 y normas relacionadas.
+            </div>
 
           </div>
         </div>
@@ -167,3 +171,5 @@ export const TermsAndConditions = () => {
     </div>
   );
 };
+
+export default PrivacyPolicy;

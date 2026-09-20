@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { MapPin, Star } from 'lucide-react';
 
 export const ExperiencesSection = () => {
