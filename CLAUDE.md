@@ -22,7 +22,7 @@ Only `VITE_`-prefixed vars are exposed to the browser by Vite.
 
 ## Architecture
 
-This is a React + Vite + TypeScript marketing/landing page for the Wavi mobile app, deployed on Netlify.
+This is a React + Vite + TypeScript marketing/landing page for the Wavi mobile app, deployed on Cloudflare Pages.
 
 **Entry point**: `src/main.tsx` → `src/app/App.tsx` → React Router → pages
 
@@ -103,4 +103,18 @@ The project also includes MUI (`@mui/material`) alongside the shadcn/ui primitiv
 
 ## Deployment
 
-Netlify SPA — `public/_redirects` contains the catch-all redirect so all routes serve `index.html`.
+Cloudflare Pages — project `waviweb` (`waviweb.pages.dev`), with `waviapp.com` and `www.waviapp.com` proxied via Cloudflare DNS as CNAMEs to it. `public/_redirects` contains the catch-all redirect so all routes serve `index.html` (Cloudflare Pages honors the same `_redirects` file format Netlify uses).
+
+## Otros directorios (tengo acceso, NO los leas por defecto)
+
+- /Users/harrysg22/Documents/2.Wavi/wavi-management — contexto de negocio (VTO, pricing, brand voice). Leé su CLAUDE.md SOLO si el task toca copy, marca, precios o venues. Para bugs y features: no entres.
+- /Users/harrysg22/Documents/4.GitHub/wavi_app — la app en Flutter/Dart. Leé su CLAUDE.md SOLO si vas a portar algo entre app y web.
+
+Nunca entres a los dos al tiempo salvo que el task lo pida explícito.
+
+## Al portar código desde el app
+
+- La lógica, los tipos y las llamadas al API se traen casi igual
+- La presentación se reescribe con los componentes de este repo
+- Nunca copies StyleSheet ni componentes nativos
+- Navegación, gestos, permisos y cámara no se portan

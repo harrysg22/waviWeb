@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, Navigate, useSearchParams } from 'react-router'
 import { supabase } from '@/lib/supabase'
 import {
   ChevronDown, ChevronUp, Check, AlertCircle, Loader2,
@@ -1666,6 +1666,8 @@ function ReviewScreen({
 ═══════════════════════════════════════════════════════════════════════════════ */
 export default function RegisterWizard() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isAddingNew = searchParams.get('new') === '1'
 
   const [authChecked,    setAuthChecked]    = useState(false)
   const [session,        setSession]        = useState<any>(null)
@@ -1701,7 +1703,13 @@ export default function RegisterWizard() {
   }, [])
 
   const checkExisting = async (authId: string) => {
-    const { data } = await supabase.from('business_registration').select('status').eq('auth_id', authId).maybeSingle()
+    const { data } = await supabase
+      .from('business_registration')
+      .select('status')
+      .eq('auth_id', authId)
+      .order('id', { ascending: false })
+      .limit(1)
+      .maybeSingle()
     if (data) setExistingStatus(data.status)
   }
 
@@ -1866,21 +1874,7 @@ export default function RegisterWizard() {
     </div>
   )
 
-  if (existingStatus === 'approved') return (
-    <div className="min-h-screen bg-[#F5F7F9] flex flex-col">
-      <div className="bg-[#25B3CC] px-6 py-5"><h1 className="text-white text-xl font-bold max-w-2xl mx-auto">Tu negocio en WAVI</h1></div>
-      <div className="flex-1 flex items-center justify-center px-6">
-        <div className="text-center max-w-sm bg-white rounded-2xl border border-gray-100 shadow-sm p-10">
-          <div className="w-16 h-16 rounded-full bg-[#25B3CC]/15 border-2 border-[#25B3CC] flex items-center justify-center mx-auto mb-5">
-            <CheckCircle2 className="w-8 h-8 text-[#25B3CC]" />
-          </div>
-          <h2 className="text-gray-900 text-xl font-bold mb-3">¡Ya estás en WAVI!</h2>
-          <p className="text-gray-500 text-sm leading-relaxed mb-6">Tu negocio ya fue aprobado y está activo en la plataforma.</p>
-          <a href="/" className="text-[#25B3CC] hover:text-[#1E9DB5] text-sm font-medium">← Volver al inicio</a>
-        </div>
-      </div>
-    </div>
-  )
+  if (existingStatus === 'approved' && !isAddingNew) return <Navigate to="/portal" replace />
 
   if (showReview) return (
     <ReviewScreen
