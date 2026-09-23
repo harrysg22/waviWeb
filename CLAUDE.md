@@ -59,6 +59,36 @@ This is a React + Vite + TypeScript marketing/landing page for the Wavi mobile a
 
 **Toast notifications**: Use `sonner` via `src/app/components/ui/sonner.tsx`.
 
+## Directory map
+
+```
+CLAUDE.md                    - agent/collaborator guidance for this repo (this file)
+README.md                    - generic project readme (install/run instructions)
+ATTRIBUTIONS.md              - shadcn/Unsplash license attribution
+index.html                   - Vite entry point
+public/                      - static assets served as-is (favicon, _redirects, etc.)
+src/
+  main.tsx, vite-env.d.ts    - app bootstrap
+  app/
+    App.tsx, routes.tsx      - React Router setup, all route definitions
+    components/
+      marketing/             - landing-page section components (Navbar, HeroSection, Footer, ...)
+      portal/                - shared UI for the business self-service portal (PortalHeader)
+      auth/                  - route guards (ProtectedAdminRoute, ProtectedBusinessRoute)
+      ui/                    - generic shadcn/ui primitives (Radix + Tailwind wrappers)
+      figma/                 - Figma-originated helpers (ImageWithFallback)
+    pages/
+      marketing/             - Home, DownloadPage, PrivacyPolicy, TermsAndConditions
+      registration/          - RegisterWizard, RegisterSuccess (business onboarding)
+      portal/                - BusinessPortal + PortalInfo/Services/Promos/Events
+      admin/                 - AdminDashboard, RegistrationDetail, EditRequestDetail
+  lib/                       - supabase.ts (client), useBusinessSite.ts (portal hook)
+  styles/                    - Tailwind v4 theme, fonts, globals
+supabase/
+  migrations/                - schema history, see "Migrations" section below
+  functions/                 - Edge Functions (approve-registration, approve-edit-request)
+```
+
 ## Supabase backend
 
 `src/lib/supabase.ts` exports a single `supabase` client used across all pages.
@@ -128,7 +158,7 @@ Cloudflare Pages — project `waviweb` (`waviweb.pages.dev`), with `waviapp.com`
 
 ## Otros directorios (tengo acceso, NO los leas por defecto)
 
-- /Users/harrysg22/Documents/2.Wavi/wavi-management — contexto de negocio (VTO, pricing, brand voice). Leé su CLAUDE.md SOLO si el task toca copy, marca, precios o venues. Para bugs y features: no entres.
+- /Users/harrysg22/Documents/2.Wavi/wavi-management — vault de Obsidian, fuente de verdad para contexto de negocio (VTO, pricing, brand voice). Leé su CLAUDE.md SOLO si el task toca copy, marca, precios o venues. Para bugs y features: no entres.
 - /Users/harrysg22/Documents/4.GitHub/wavi_app — la app en Flutter/Dart. Leé su CLAUDE.md SOLO si vas a portar algo entre app y web.
 
 Nunca entres a los dos al tiempo salvo que el task lo pida explícito.
